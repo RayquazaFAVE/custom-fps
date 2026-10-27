@@ -77,12 +77,54 @@
         <div class="page-heading"><div><div class="eyebrow">Weapon workshop</div><h1>LOADOUT</h1></div><span class="map-tag">PROTOTYPE</span></div>
         <section class="panel content-panel"><div class="panel-head"><h2>STARTING CORES</h2><span class="muted" style="font-size:11px;">ONE PER CLASS</span></div><div class="panel-body">
           <p>Each core determines the weapon's class, base stats, and in-game model. Attachments change performance, but they don't change the model.</p>
-          <div class="weapon-row">
-            <button class="weapon-tile" type="button" data-coming-soon="AR customization will be added in a later step."><span class="weapon-code">CORE 01</span><strong>AR</strong><span>All-rounder</span></button>
-            <button class="weapon-tile" type="button" data-coming-soon="Sniper customization will be added in a later step."><span class="weapon-code">CORE 02</span><strong>SNIPER</strong><span>Long range</span></button>
-            <button class="weapon-tile" type="button" data-coming-soon="SMG customization will be added in a later step."><span class="weapon-code">CORE 03</span><strong>SMG</strong><span>Rapid fire</span></button>
-            <button class="weapon-tile" type="button" data-coming-soon="LMG customization will be added in a later step."><span class="weapon-code">CORE 04</span><strong>LMG</strong><span>Sustained fire</span></button>
-            <button class="weapon-tile" type="button" data-coming-soon="Shotgun customization will be added in a later step."><span class="weapon-code">CORE 05</span><strong>SHOTGUN</strong><span>Close range</span></button>
+          <div class="core-workshop">
+            <div class="core-selection" role="group" aria-label="Choose a weapon core">
+              <button class="core-card is-selected" type="button" data-core="vanguard" aria-pressed="true">
+                <span class="core-card-top"><span class="core-index">CORE 01</span><span class="core-check">SELECTED</span></span>
+                <span class="core-silhouette ar-silhouette" aria-hidden="true"></span>
+                <strong>VANGUARD-01</strong><span class="core-class">ASSAULT RIFLE</span><span class="core-role">Versatile · Mid-range</span>
+              </button>
+              <button class="core-card" type="button" data-core="scope" aria-pressed="false">
+                <span class="core-card-top"><span class="core-index">CORE 02</span><span class="core-check">SELECT</span></span>
+                <span class="core-silhouette sniper-silhouette" aria-hidden="true"></span>
+                <strong>SCOPE-01</strong><span class="core-class">SNIPER RIFLE</span><span class="core-role">Precision · Long-range</span>
+              </button>
+              <button class="core-card" type="button" data-core="viper" aria-pressed="false">
+                <span class="core-card-top"><span class="core-index">CORE 03</span><span class="core-check">SELECT</span></span>
+                <span class="core-silhouette smg-silhouette" aria-hidden="true"></span>
+                <strong>VIPER-01</strong><span class="core-class">SUBMACHINE GUN</span><span class="core-role">Fast · Close-range</span>
+              </button>
+              <button class="core-card" type="button" data-core="bastion" aria-pressed="false">
+                <span class="core-card-top"><span class="core-index">CORE 04</span><span class="core-check">SELECT</span></span>
+                <span class="core-silhouette lmg-silhouette" aria-hidden="true"></span>
+                <strong>BASTION-01</strong><span class="core-class">LIGHT MACHINE GUN</span><span class="core-role">Sustained · Heavy</span>
+              </button>
+              <button class="core-card" type="button" data-core="breacher" aria-pressed="false">
+                <span class="core-card-top"><span class="core-index">CORE 05</span><span class="core-check">SELECT</span></span>
+                <span class="core-silhouette shotgun-silhouette" aria-hidden="true"></span>
+                <strong>BREACHER-01</strong><span class="core-class">SHOTGUN</span><span class="core-role">Impact · Point-blank</span>
+              </button>
+            </div>
+            <section class="core-detail" aria-live="polite" aria-labelledby="selected-core-name">
+              <div class="core-detail-art">
+                <span class="eyebrow">Selected platform</span>
+                <div id="detail-silhouette" class="detail-silhouette ar-silhouette" aria-hidden="true"></div>
+                <span id="detail-core-code" class="detail-code">PLATFORM // VF-01</span>
+              </div>
+              <div class="core-detail-info">
+                <div class="eyebrow">Core specification / Prototype values</div>
+                <h2 id="selected-core-name">VANGUARD-01</h2>
+                <p id="selected-core-description">A balanced assault platform built for reliable performance across the middle of the arena.</p>
+                <div class="stat-grid" id="core-stats">
+                  <div class="stat-cell"><span>Damage</span><strong>25</strong></div>
+                  <div class="stat-cell"><span>Fire rate</span><strong>600 RPM</strong></div>
+                  <div class="stat-cell"><span>Recoil</span><strong>1.0</strong></div>
+                  <div class="stat-cell"><span>Reload</span><strong>2.0 sec</strong></div>
+                  <div class="stat-cell"><span>Range</span><strong>60 units</strong></div>
+                </div>
+                <div class="core-detail-footer"><span id="selected-core-class">ASSAULT RIFLE</span><span>CORE MODEL · ATTACHMENTS MODIFY STATS</span></div>
+              </div>
+            </section>
           </div>
           <div class="info-grid">
             <div class="info-box"><h3>ATTACHMENT SLOTS</h3><p>Barrel · Stock · Magazine · Scope</p></div>
