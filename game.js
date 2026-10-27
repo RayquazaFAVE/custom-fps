@@ -115,7 +115,7 @@ function update(dt){
  if(!started||paused)return;
  fireCooldown=Math.max(0,fireCooldown-dt);
  if(reloading){reloadTimer-=dt;if(reloadTimer<=0){ammo=weapons[weaponIndex].mag;reloading=false;syncHUD();showToast("MAGAZINE RELOADED");}}
- recoilKick=Math.max(0,recoilKick-dt*.055);gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
+ const previousRecoil=recoilKick;recoilKick=Math.max(0,recoilKick-dt*.055);camera.rotation.x=Math.min(1.25,camera.rotation.x+(previousRecoil-recoilKick));gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
  if(gun){gun.position.z=.62+gunKick;gun.position.y=-.29-gunKick*.4;}
  if(slideTimer>0){slideTimer=Math.max(0,slideTimer-dt);camera.position.x+=slideDX*dt;camera.position.z+=slideDZ*dt;camera.position.y=1.15;if(slideTimer===0){slideDX=0;slideDZ=0;}}
  else{
