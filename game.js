@@ -21,8 +21,8 @@ flat("upper ground",13,13,26,26,0,ground);
 flat("central bowl floor",13,13,10.4,7.4,-1.2,bowlmat);
 block("bowl north retaining wall",13,.0,9.05,10.4,2.4,.5,wall);
 block("bowl south retaining wall",13,.0,16.95,10.4,2.4,.5,wall);
-block("bowl west retaining wall",7.8,.0,13,.5,2.4,7.4,wall);
-block("bowl east retaining wall",18.2,.0,13,.5,2.4,7.4,wall);
+block("bowl west retaining wall north",7.8,.0,9.45,.5,2.4,2.3,wall);block("bowl west retaining wall south",7.8,.0,16.55,.5,2.4,2.3,wall);
+block("bowl east retaining wall north",18.2,.0,9.45,.5,2.4,2.3,wall);block("bowl east retaining wall south",18.2,.0,16.55,.5,2.4,2.3,wall);
 // Openings in the west/east retaining walls line up with the two stair flights.
 for(let i=0;i<7;i++){const z=10.55+i*.72;const y=-1.12+i*.16;block("west stair "+i,7.05,y,z,2.0,.25+i*.02,.78,stepmat);block("east stair "+i,18.95,y,16.0-i*.72,2.0,.25+i*.02,.78,stepmat);}
 // Two parallel raised lanes, the Barriers, run along either side of the bowl.
@@ -34,7 +34,7 @@ block("north perimeter",13,1.4,0,26,2.8,.6,wall);block("south perimeter",13,1.4,
 [[9,5],[13,5],[17,5],[9,21],[13,21],[17,21],[10,13],[16,13]].forEach(([x,z])=>block("field cover",x,.55,z,1.5,1.1,1.1,cover));
 // Glowing map labels/markers via simple colored vertical posts at lane ends.
 for(const z of [8,18])for(const x of [5.5,20.5])block("lane marker",x,1.1,z,.12,2.2,.12,trim);
-camera=new B.UniversalCamera("player camera",new B.Vector3(3.5,1.7,13),scene);camera.attachControl(canvas,true);camera.inertia=0;camera.angularSensibility=2400;camera.speed=0;camera.minZ=.08;camera.fov=Math.PI/2.8;camera.checkCollisions=true;camera.applyGravity=false;camera.ellipsoid=new B.Vector3(.35,.85,.35);camera.ellipsoidOffset=new B.Vector3(0,.8,0);camera.keysUp=[87,38];camera.keysDown=[83,40];camera.keysLeft=[65];camera.keysRight=[68];camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
+camera=new B.UniversalCamera("player camera",new B.Vector3(5.7,1.7,13),scene);camera.attachControl(canvas,true);camera.inertia=0;camera.angularSensibility=2400;camera.speed=0;camera.minZ=.08;camera.fov=Math.PI/2.8;camera.checkCollisions=true;camera.applyGravity=false;camera.ellipsoid=new B.Vector3(.35,.85,.35);camera.ellipsoidOffset=new B.Vector3(0,.8,0);camera.keysUp=[87,38];camera.keysDown=[83,40];camera.keysLeft=[65];camera.keysRight=[68];camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 camera.rotation.set(0,Math.PI/2,0); // looking across the arena from the west side
 // A small visible rifle silhouette, parented to the camera.
 const gunMat=material("rifle body","#18252c"),gunAccent=material("rifle accent","#b7f34a",.4,"#334a11");
@@ -46,7 +46,7 @@ createTargets();return scene;
 function createTargets(){targets=[];const spots=[[8.5,1.1,10.5],[11.5,1.1,13.2],[14.5,1.1,12],[17.5,1.1,10.5],[18,1.1,15.3]];spots.forEach((v,i)=>{const root=new B.TransformNode("drone root "+i,scene);root.position.set(v[0],v[1],v[2]);const body=B.MeshBuilder.CreateSphere("drone body",{diameter:.75,segments:8},scene);body.parent=root;body.material=material("drone shell "+i,"#52666a");const eye=B.MeshBuilder.CreateBox("drone eye",{width:.38,height:.08,depth:.08},scene);eye.parent=root;eye.position.z=-.34;eye.material=material("drone eye glow "+i,"#b7f34a",.4,"#b7f34a");const ring=B.MeshBuilder.CreateTorus("drone ring",{diameter:1.05,thickness:.045,tessellation:12},scene);ring.parent=root;ring.rotation.x=Math.PI/2;ring.material=material("drone ring mat "+i,"#b7f34a",.4,"#273b0c");targets.push({root,alive:true,hp:2,phase:i*1.2,baseY:v[1]});});}
 function showToast(s){const el=$("toast");el.textContent=s;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1300);}
 function syncHUD(){$("health").textContent=health;$("hpbar").style.width=health+"%";$("ammo").textContent=ammo;$("objective").textContent="Eliminate training drones · "+kills+" / 5";}
-function resetGame(){health=100;ammo=30;kills=0;reloading=false;reloadTimer=0;fireCooldown=0;camera.position.set(3.5,1.7,13);camera.rotation.set(0,Math.PI/2,0);jumpVelocity=0;onGround=true;targets.forEach((t,i)=>{t.alive=true;t.hp=2;t.root.setEnabled(true);});syncHUD();}
+function resetGame(){health=100;ammo=30;kills=0;reloading=false;reloadTimer=0;fireCooldown=0;camera.position.set(5.7,1.7,13);camera.rotation.set(0,Math.PI/2,0);jumpVelocity=0;onGround=true;targets.forEach((t,i)=>{t.alive=true;t.hp=2;t.root.setEnabled(true);});syncHUD();}
 function startGame(){started=true;paused=false;$("intro").classList.add("hide");$("pausemenu").classList.add("hide");canvas.focus();if(canvas.requestPointerLock)canvas.requestPointerLock();}
 function togglePause(){if(!started)return;paused=!paused;$("pausemenu").classList.toggle("hide",!paused);if(paused&&document.pointerLockElement)document.exitPointerLock();else if(!paused&&canvas.requestPointerLock)canvas.requestPointerLock();}
 function endGame(win){paused=true;$("endtitle").textContent=win?"TEST COMPLETE":"OPERATOR DOWN";$("endcopy").textContent=win?"All five training drones eliminated. Arena clear.":"You were tagged out during testing. Reset and try again.";$("endmenu").classList.remove("hide");if(document.pointerLockElement)document.exitPointerLock();}
