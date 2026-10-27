@@ -116,4 +116,37 @@ document.querySelector("#save-settings").addEventListener("click", () => {
   showToast("UI scale applied for this page session.");
 });
 
+
+const weaponCores = {
+  vanguard: { name: "VANGUARD-01", className: "ASSAULT RIFLE", code: "PLATFORM // VG-01", silhouette: "ar-silhouette", description: "A balanced assault platform built for reliable performance across the middle of the arena.", stats: [["Damage","25"],["Fire rate","600 RPM"],["Recoil","1.0"],["Reload","2.0 sec"],["Range","60 units"]] },
+  scope: { name: "SCOPE-01", className: "SNIPER RIFLE", code: "PLATFORM // SC-01", silhouette: "sniper-silhouette", description: "A precision rifle designed to control long sightlines. Powerful per shot, but slow to cycle and reload.", stats: [["Damage","100"],["Fire rate","40 RPM"],["Recoil","3.0"],["Reload","3.0 sec"],["Range","150 units"]] },
+  viper: { name: "VIPER-01", className: "SUBMACHINE GUN", code: "PLATFORM // VP-01", silhouette: "smg-silhouette", description: "A compact, fast-firing platform built for aggressive movement and close-range engagements.", stats: [["Damage","15"],["Fire rate","900 RPM"],["Recoil","1.8"],["Reload","1.8 sec"],["Range","30 units"]] },
+  bastion: { name: "BASTION-01", className: "LIGHT MACHINE GUN", code: "PLATFORM // BS-01", silhouette: "lmg-silhouette", description: "A heavy support platform built to maintain pressure with sustained fire, trading handling speed for endurance.", stats: [["Damage","20"],["Fire rate","650 RPM"],["Recoil","2.2"],["Reload","4.5 sec"],["Range","70 units"]] },
+  breacher: { name: "BREACHER-01", className: "SHOTGUN", code: "PLATFORM // BR-01", silhouette: "shotgun-silhouette", description: "A close-quarters platform that delivers a wide pellet spread. Best used when the target is near.", stats: [["Damage","12 / pellet"],["Fire rate","70 RPM"],["Recoil","2.5"],["Reload","0.6 sec / shell"],["Range","15 units"]] }
+};
+
+function selectWeaponCore(coreId) {
+  const core = weaponCores[coreId];
+  if (!core) return;
+  document.querySelectorAll("[data-core]").forEach(button => {
+    const selected = button.dataset.core === coreId;
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+    button.querySelector(".core-check").textContent = selected ? "SELECTED" : "SELECT";
+  });
+  document.querySelector("#selected-core-name").textContent = core.name;
+  document.querySelector("#selected-core-description").textContent = core.description;
+  document.querySelector("#selected-core-class").textContent = core.className;
+  document.querySelector("#detail-core-code").textContent = core.code;
+  const silhouette = document.querySelector("#detail-silhouette");
+  silhouette.className = "detail-silhouette " + core.silhouette;
+  document.querySelector("#core-stats").innerHTML = core.stats.map(([label,value]) =>
+    '<div class="stat-cell"><span>' + label + '</span><strong>' + value + '</strong></div>'
+  ).join("");
+}
+
+document.querySelectorAll("[data-core]").forEach(button => {
+  button.addEventListener("click", () => selectWeaponCore(button.dataset.core));
+});
+
 showView("lobby");
