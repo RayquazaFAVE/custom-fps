@@ -1,1 +1,27 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CustomFPS — Testing Ground</title><link rel="stylesheet" href="game.css?v=1"><script src="game.js?v=1" defer></script></head><body><canvas id="game"></canvas><header><b><i>C//</i> CUSTOMFPS <small>TESTING GROUND // PLAYTEST 0.2</small></b><span>LOCAL SIMULATION <button id="pause">PAUSE [ESC]</button> <button id="exit">EXIT TO LOBBY</button></span></header><div class="maptitle"><b>TESTING GROUND</b><small>MAP 001 · THE BARRIERS · CENTRAL BOWL</small></div><canvas id="mini" width="156" height="156"></canvas><div class="crosshair">+</div><section class="hud"><div><small>VITALS</small><strong id="health">100</strong><div class="meter"><span id="hpbar"></span></div><small>HEALTH</small></div><div class="objective"><small>CURRENT OBJECTIVE</small><strong>TEST THE ARENA</strong><small id="objective">Eliminate training drones · 0 / 5</small></div><div><small>VANGUARD-01 // AR</small><strong><span id="ammo">30</span><em> / 30</em></strong><button id="reload">RELOAD [R]</button></div></section><div class="controls">WASD MOVE · MOUSE AIM · CLICK FIRE · SPACE JUMP · R RELOAD · ESC PAUSE</div><div id="intro" class="overlay"><article><small>COMBAT SIMULATION / 001</small><h1>TESTING<br><i>GROUND</i></h1><p>Your first playable CustomFPS build. Clear five training drones and get familiar with the arena.</p><button id="start">ENTER ARENA ↗</button><footer>Click to capture mouse · ESC releases it</footer></article></div><div id="pausemenu" class="overlay hide"><article><small>SIMULATION PAUSED</small><h2>TAKE A BREATHER.</h2><button id="resume">RESUME MATCH</button><button id="exit2" class="secondary">RETURN TO LOBBY</button></article></div><div id="endmenu" class="overlay hide"><article><small>OBJECTIVE UPDATE</small><h2 id="endtitle">TEST COMPLETE</h2><p id="endcopy">All targets cleared.</p><button id="again">RUN IT AGAIN</button><button id="exit3" class="secondary">RETURN TO LOBBY</button></article></div><div id="toast"></div></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CustomFPS — 3D Testing Ground</title>
+<link rel="stylesheet" href="game.css?v=babylon-1">
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script src="game.js?v=babylon-1" defer></script>
+</head>
+<body>
+<canvas id="game" aria-label="CustomFPS 3D arena"></canvas>
+<header><b><i>C//</i> CUSTOMFPS <small>TESTING GROUND // 3D PLAYTEST 0.3</small></b><span>LOCAL SIMULATION <button id="pause">PAUSE [ESC]</button> <button id="exit">EXIT TO LOBBY</button></span></header>
+<div class="maptitle"><b>TESTING GROUND</b><small>MAP 001 · THE BARRIERS · CENTRAL BOWL</small></div>
+<div class="reticle">+</div>
+<section class="hud">
+<div><small>VITALS</small><strong id="health">100</strong><div class="meter"><span id="hpbar"></span></div><small>HEALTH</small></div>
+<div class="objective"><small>CURRENT OBJECTIVE</small><strong>TEST THE ARENA</strong><small id="objective">Eliminate training drones · 0 / 5</small></div>
+<div><small>VANGUARD-01 // AR</small><strong><span id="ammo">30</span><em> / 30</em></strong><button id="reload">RELOAD [R]</button></div>
+</section>
+<div class="controls">WASD MOVE · MOUSE AIM · CLICK FIRE · SPACE JUMP · R RELOAD · ESC PAUSE</div>
+<div id="intro" class="overlay"><article><small>COMBAT SIMULATION / 001</small><h1>TESTING<br><i>GROUND</i></h1><p>This build uses a real-time 3D engine. Explore the arena, test the stairs, and clear five training drones.</p><button id="start">ENTER ARENA ↗</button><footer>Click to capture mouse · ESC releases it</footer></article></div>
+<div id="pausemenu" class="overlay hide"><article><small>SIMULATION PAUSED</small><h2>TAKE A BREATHER.</h2><button id="resume">RESUME MATCH</button><button id="exit2" class="secondary">RETURN TO LOBBY</button></article></div>
+<div id="endmenu" class="overlay hide"><article><small>OBJECTIVE UPDATE</small><h2 id="endtitle">TEST COMPLETE</h2><p id="endcopy">All targets cleared.</p><button id="again">RUN IT AGAIN</button><button id="exit3" class="secondary">RETURN TO LOBBY</button></article></div>
+<div id="toast"></div>
+<div id="engine-error" class="hide">The 3D engine could not start. Check your internet connection and reload; Babylon.js is loaded from a CDN.</div>
+</body></html>
