@@ -75,7 +75,7 @@ if (joinButton) joinButton.addEventListener("click", () => {
 });
 const deployButton = $("#deploy-button");
 if (deployButton) deployButton.addEventListener("click", () => {
-  openModal("No match connected", '<p>To deploy, you will need to host a LAN match or join one hosted by another player.</p><p>Multiplayer connection code has not been added yet, so this button will not launch a match.</p><div class="modal-actions"><button class="btn btn-primary" type="button" data-close>Understood</button></div>');
+  window.location.href = "game.html";
 });
 const settingsButton = $("#save-settings");
 if (settingsButton) settingsButton.addEventListener("click", () => {
