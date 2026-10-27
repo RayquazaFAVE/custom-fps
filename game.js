@@ -68,12 +68,45 @@ for(const z of [8,92]){
 [[25,25],[50,25],[75,25],[25,50],[75,50],[25,75],[50,75],[75,75]].forEach(([x,z])=>block("field cover",x,.65,z,3,1.3,2,cover));
 camera=new B.UniversalCamera("player camera",new B.Vector3(50,1.7,15),scene);camera.attachControl(canvas,true);camera.inertia=0;camera.angularSensibility=2400;camera.speed=0;camera.minZ=.08;camera.fov=Math.PI/2.8;camera.checkCollisions=true;camera.applyGravity=false;camera.ellipsoid=new B.Vector3(.35,.85,.35);camera.ellipsoidOffset=new B.Vector3(0,.8,0);camera.keysUp=[87,38];camera.keysDown=[83,40];camera.keysLeft=[65];camera.keysRight=[68];camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 camera.rotation.set(0,0,0);
-// Simple first-person rifle silhouette.
-const gunMat=material("weapon body","#18252c"),gunAccent=material("weapon accent",weapons[0].color,.4,weapons[0].color);
-gun=B.MeshBuilder.CreateBox("rifle receiver",{width:.22,height:.17,depth:.65},scene);gun.material=gunMat;gun.parent=camera;gun.position.set(.34,-.29,.62);
-barrelMesh=B.MeshBuilder.CreateCylinder("rifle barrel",{height:.48,diameter:.055},scene);barrelMesh.rotation.x=Math.PI/2;barrelMesh.material=gunAccent;barrelMesh.parent=camera;barrelMesh.position.set(.34,-.25,.23);
-const sight=B.MeshBuilder.CreateBox("rifle sight",{width:.07,height:.06,depth:.12},scene);sight.material=gunAccent;sight.parent=camera;sight.position.set(.34,-.17,.55);
-muzzleFlash=B.MeshBuilder.CreateSphere("muzzle flash",{diameter:.18,segments:6},scene);muzzleFlash.parent=camera;muzzleFlash.position.set(.34,-.25,-.05);muzzleFlash.material=new B.StandardMaterial("muzzle flash material",scene);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.isVisible=false;
+// Stylized medium-detail AR, built from real Babylon.js meshes (no external asset loader).
+// The camera-local Z axis points down the rifle toward its muzzle.
+const gunMat=material("AR graphite body","#263238"),gunAccent=material("AR accent",weapons[0].color,.45,weapons[0].color);
+const gunDark=material("AR dark components","#11191e"),gunMetal=material("AR metal","#7b898b"),gunGrip=material("AR grip","#35464a");
+function gunBox(name,w,h,d,x,y,z,mat){const m=B.MeshBuilder.CreateBox(name,{width:w,height:h,depth:d},scene);m.material=mat;m.parent=camera;m.position.set(x,y,z);return m;}
+function gunCylinder(name,diameter,length,x,y,z,mat,segments=12){const m=B.MeshBuilder.CreateCylinder(name,{height:length,diameter, tessellation:segments},scene);m.rotation.x=Math.PI/2;m.material=mat;m.parent=camera;m.position.set(x,y,z);return m;}
+// Receiver and raised upper receiver.
+gun=gunBox("AR lower receiver",.22,.17,.48,.34,-.29,.60,gunMat);
+gunBox("AR upper receiver",.205,.095,.49,.34,-.205,.60,gunDark);
+gunBox("AR handguard",.205,.145,.40,.34,-.27,.30,gunGrip);
+// Barrel and muzzle brake.
+barrelMesh=gunCylinder("AR barrel",.052,.34,.34,-.25,.105,gunAccent);
+gunCylinder("AR muzzle brake",.085,.105,.34,-.25,-.075,gunDark);
+// Stock and cheek rest behind the receiver.
+gunBox("AR buffer tube",.13,.105,.24,.34,-.28,.90,gunDark);
+gunBox("AR shoulder stock",.19,.19,.28,.34,-.30,1.12,gunGrip);
+gunBox("AR stock buttpad",.205,.205,.055,.34,-.30,1.285,gunDark);
+gunBox("AR cheek rest",.17,.045,.19,.34,-.19,1.08,gunAccent);
+// Angled-looking pistol grip and magazine under the receiver.
+const pistolGrip=gunBox("AR pistol grip",.12,.24,.16,.34,-.47,.72,gunGrip);pistolGrip.rotation.x=-.14;
+gunBox("AR grip base",.13,.045,.17,.34,-.595,.74,gunDark);
+const magazine=gunBox("AR magazine",.145,.28,.18,.34,-.49,.49,gunDark);magazine.rotation.x=-.10;
+gunBox("AR magazine floorplate",.16,.045,.19,.34,-.64,.51,gunAccent);
+// Top rail, optic mount, optic body and glass.
+gunBox("AR top rail",.12,.045,.43,.34,-.145,.55,gunDark);
+gunBox("AR optic mount",.13,.06,.12,.34,-.095,.49,gunAccent);
+gunBox("AR optic housing",.14,.13,.15,.34,-.015,.49,gunDark);
+gunCylinder("AR optic lens",.075,.012,.34,-.015,.405,gunMetal,12);
+// Front sight and rear sight.
+gunBox("AR front sight post",.045,.13,.05,.34,-.17,.22,gunDark);
+gunBox("AR front sight cap",.10,.035,.07,.34,-.105,.22,gunAccent);
+gunBox("AR rear sight",.07,.085,.065,.34,-.095,.70,gunDark);
+// Side ejection port and handguard rail ribs.
+gunBox("AR ejection port",.018,.065,.17,.45,-.22,.59,gunDark);
+gunBox("AR charging handle",.055,.035,.10,.46,-.17,.72,gunMetal);
+for(let i=0;i<5;i++)gunBox("AR handguard rib "+i,.025,.035,.045,.455,-.27,.19+i*.065,gunMetal);
+// Short lower handguard grip.
+gunBox("AR foregrip",.11,.14,.105,.34,-.405,.31,gunDark);
+muzzleFlash=B.MeshBuilder.CreateSphere("muzzle flash",{diameter:.18,segments:6},scene);muzzleFlash.parent=camera;muzzleFlash.position.set(.34,-.25,-.15);muzzleFlash.material=new B.StandardMaterial("muzzle flash material",scene);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.isVisible=false;
 createTargets();
  // Color the weapon accent to match the saved core.
  const activeWeapon=weapons[weaponIndex];barrelMesh.material.diffuseColor=B.Color3.FromHexString(activeWeapon.color);barrelMesh.material.emissiveColor=B.Color3.FromHexString(activeWeapon.color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(activeWeapon.color);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(activeWeapon.color);
