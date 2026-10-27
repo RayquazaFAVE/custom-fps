@@ -5,7 +5,7 @@ if(!window.BABYLON){$("engine-error").classList.remove("hide");return;}
 const B=window.BABYLON;
 const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:false,powerPreference:"low-power"});
 engine.setHardwareScalingLevel(Math.max(1,window.devicePixelRatio>1?1.35:1));
-let scene,camera,started=false,paused=false,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,weaponIndex=0,recoilKick=0,gunKick=0,spreadKick=0,slideTimer=0,slideDX=0,slideDZ=0,crouched=false;
+let scene,camera,started=false,paused=false,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,weaponIndex=0,recoilKick=0,gunKick=0,spreadKick=0,slideTimer=0,slideDX=0,slideDZ=0,crouched=false,savedLoadout=null;
 const MOVE_SPEED=8, ARENA=100;
 const weapons=[
  {name:"VANGUARD AR",damage:25,rate:.14,recoil:.018,spread:.012,mag:30,range:100,color:"#b7f34a",reload:1.25},
@@ -14,6 +14,24 @@ const weapons=[
  {name:"LONGSHOT SNIPER",damage:100,rate:.9,recoil:.09,spread:.001,mag:5,range:140,color:"#ff78a8",reload:1.8},
  {name:"BULWARK LMG",damage:20,rate:.19,recoil:.028,spread:.02,mag:60,range:90,color:"#c7a5ff",reload:2}
 ];
+const coreToWeapon={vanguard:0,viper:1,breacher:2,scope:3,bastion:4};
+function loadSavedLoadout(){
+ try{savedLoadout=JSON.parse(localStorage.getItem("customfps-loadout")||"null");}catch(e){savedLoadout=null;}
+ if(!savedLoadout||!savedLoadout.loadout||!savedLoadout.stats)return;
+ const i=coreToWeapon[savedLoadout.loadout.core];
+ if(i===undefined)return;
+ weaponIndex=i;
+ const st=savedLoadout.stats,w=weapons[i];
+ // Convert the loadout builder's displayed stats into match behavior.
+ w.damage=Math.max(1,Number(st.damage)||w.damage);
+ w.rate=Math.max(.055,Math.min(1.5,60/Math.max(1,Number(st.rate)||60)));
+ w.recoil=Math.max(.004,Math.min(.14,(Number(st.recoil)||1)/100));
+ w.mag=Math.max(1,Math.round(Number(st.capacity)||w.mag));
+ w.range=Math.max(10,Number(st.range)||w.range);
+ w.reload=Math.max(.5,Number(st.reload)||w.reload);
+ w.name=(savedLoadout.core.name||w.name);
+}
+loadSavedLoadout();
 function material(name,color,roughness=1,emissive=null){const m=new B.StandardMaterial(name,scene);m.diffuseColor=B.Color3.FromHexString(color);m.specularColor=new B.Color3(.12,.12,.12);m.roughness=roughness;if(emissive)m.emissiveColor=B.Color3.FromHexString(emissive);return m;}
 function block(name,x,y,z,sx,sy,sz,mat){const o=B.MeshBuilder.CreateBox(name,{width:sx,height:sy,depth:sz},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
 function flat(name,x,z,sx,sz,y,mat){const o=B.MeshBuilder.CreateGround(name,{width:sx,height:sz,subdivisions:1},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
@@ -56,7 +74,10 @@ gun=B.MeshBuilder.CreateBox("rifle receiver",{width:.22,height:.17,depth:.65},sc
 barrelMesh=B.MeshBuilder.CreateCylinder("rifle barrel",{height:.48,diameter:.055},scene);barrelMesh.rotation.x=Math.PI/2;barrelMesh.material=gunAccent;barrelMesh.parent=camera;barrelMesh.position.set(.34,-.25,.23);
 const sight=B.MeshBuilder.CreateBox("rifle sight",{width:.07,height:.06,depth:.12},scene);sight.material=gunAccent;sight.parent=camera;sight.position.set(.34,-.17,.55);
 muzzleFlash=B.MeshBuilder.CreateSphere("muzzle flash",{diameter:.18,segments:6},scene);muzzleFlash.parent=camera;muzzleFlash.position.set(.34,-.25,-.05);muzzleFlash.material=new B.StandardMaterial("muzzle flash material",scene);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.isVisible=false;
-createTargets();return scene;
+createTargets();
+ // Color the weapon accent to match the saved core.
+ const activeWeapon=weapons[weaponIndex];barrelMesh.material.diffuseColor=B.Color3.FromHexString(activeWeapon.color);barrelMesh.material.emissiveColor=B.Color3.FromHexString(activeWeapon.color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(activeWeapon.color);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(activeWeapon.color);
+ return scene;
 }
 function createTargets(){
  targets=[];
@@ -75,8 +96,8 @@ function createTargets(){
  });
 }
 function showToast(s){const el=$("toast");el.textContent=s;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1300);}
-function syncHUD(){$("health").textContent=health;$("hpbar").style.width=health+"%";$("ammo").textContent=ammo;$("objective").textContent="Eliminate training drones · "+kills+" / 5";const w=weapons[weaponIndex];$("weapon-name").textContent=w.name;$("ammo").textContent=ammo;$("weapon-slots").textContent="1 AR · 2 SMG · 3 SG · 4 SR · 5 LMG";}
-function resetGame(){health=100;kills=0;weaponIndex=0;ammo=weapons[0].mag;reloading=false;reloadTimer=0;fireCooldown=0;recoilKick=0;gunKick=0;spreadKick=0;slideTimer=0;crouched=false;camera.position.set(50,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
+function syncHUD(){$("health").textContent=health;$("hpbar").style.width=health+"%";$("ammo").textContent=ammo;$("objective").textContent="Eliminate training drones · "+kills+" / 5";const w=weapons[weaponIndex];$("weapon-name").textContent=w.name;$("ammo").textContent=ammo;$("weapon-slots").textContent="1 AR · 2 SMG · 3 SG · 4 SR · 5 LMG";const ammoMax=document.querySelector(".hud em");if(ammoMax)ammoMax.textContent=" / "+w.mag;}
+function resetGame(){health=100;kills=0;ammo=weapons[weaponIndex].mag;reloading=false;reloadTimer=0;fireCooldown=0;recoilKick=0;gunKick=0;spreadKick=0;slideTimer=0;crouched=false;camera.position.set(50,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
 function equipWeapon(i){if(i<0||i>=weapons.length||i===weaponIndex)return;weaponIndex=i;const w=weapons[i];ammo=w.mag;reloading=false;reloadTimer=0;fireCooldown=0;gun.material.diffuseColor=B.Color3.FromHexString("#18252c");barrelMesh.material.diffuseColor=B.Color3.FromHexString(w.color);barrelMesh.material.emissiveColor=B.Color3.FromHexString(w.color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(w.color);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(w.color);syncHUD();showToast("EQUIPPED: "+w.name);}
 function startGame(){started=true;paused=false;$("intro").classList.add("hide");$("pausemenu").classList.add("hide");canvas.focus();if(canvas.requestPointerLock)canvas.requestPointerLock();}
