@@ -29,7 +29,7 @@ function loadSavedLoadout(){
  w.mag=Math.max(1,Math.round(Number(st.capacity)||w.mag));
  w.range=Math.max(10,Number(st.range)||w.range);
  w.reload=Math.max(.5,Number(st.reload)||w.reload);
- w.name=(savedLoadout.core.name||w.name);
+ w.name=(savedLoadout.core.name&&savedLoadout.core.className)?savedLoadout.core.name+" · "+savedLoadout.core.className:(savedLoadout.core.name||w.name);
 }
 loadSavedLoadout();
 function material(name,color,roughness=1,emissive=null){const m=new B.StandardMaterial(name,scene);m.diffuseColor=B.Color3.FromHexString(color);m.specularColor=new B.Color3(.12,.12,.12);m.roughness=roughness;if(emissive)m.emissiveColor=B.Color3.FromHexString(emissive);return m;}
