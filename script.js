@@ -172,6 +172,15 @@ $$("[data-core]").forEach(button => button.addEventListener("click", () => {
 const saveButton = $("#save-loadout");
 if (saveButton) saveButton.addEventListener("click", () => {
   saved = {...draft};
+  try {
+    localStorage.setItem("customfps-loadout", JSON.stringify({
+      loadout: {...saved},
+      stats: statsFor(saved),
+      core: weaponCores[saved.core]
+    }));
+  } catch (error) {
+    console.warn("Could not persist loadout in this browser.", error);
+  }
   syncBuilder();
   if ($("#saved-confirmation")) {
     $("#saved-confirmation").hidden = false;
