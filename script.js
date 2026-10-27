@@ -1,50 +1,49 @@
-const views = {
-  lobby: document.querySelector("#view-lobby"),
-  loadout: document.querySelector("#view-loadout"),
-  progression: document.querySelector("#view-progression"),
-  settings: document.querySelector("#view-settings")
-};
+(() => {
+"use strict";
 
-const tabButtons = [...document.querySelectorAll("[data-view]")];
-const modalRoot = document.querySelector("#modal-root");
-const toastRoot = document.querySelector("#toast-root");
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+const views = {
+  lobby: $("#view-lobby"),
+  loadout: $("#view-loadout"),
+  progression: $("#view-progression"),
+  settings: $("#view-settings")
+};
+const modalRoot = $("#modal-root");
+const toastRoot = $("#toast-root");
 
 function showView(name) {
   Object.entries(views).forEach(([key, element]) => {
-    element.hidden = key !== name;
+    if (element) element.hidden = key !== name;
   });
-  tabButtons.forEach(button => {
+  $$("[data-view]").forEach(button => {
     button.setAttribute("aria-selected", String(button.dataset.view === name));
   });
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.scrollTo({top: 0, behavior: "smooth"});
 }
-
-tabButtons.forEach(button => {
-  button.addEventListener("click", () => showView(button.dataset.view));
-});
-
 function showToast(message) {
+  if (!toastRoot) return;
   toastRoot.innerHTML = "";
   const toast = document.createElement("div");
   toast.className = "toast";
   toast.setAttribute("role", "status");
   toast.textContent = message;
-  toastRoot.append(toast);
+  toastRoot.appendChild(toast);
   window.setTimeout(() => toast.remove(), 3200);
 }
-
+function closeModal() {
+  if (modalRoot) modalRoot.innerHTML = "";
+  document.removeEventListener("keydown", handleEscape);
+}
+function handleEscape(event) {
+  if (event.key === "Escape") closeModal();
+}
 function openModal(title, content) {
-  modalRoot.innerHTML = `
-    <div class="modal-backdrop" data-backdrop>
-      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <div class="modal-head">
-          <h2 id="modal-title">${title}</h2>
-          <button class="modal-close" type="button" aria-label="Close dialog" data-close>&times;</button>
-        </div>
-        <div class="modal-content">${content}</div>
-      </section>
-    </div>`;
-  modalRoot.querySelector("[data-close]").addEventListener("click", closeModal);
+  if (!modalRoot) return;
+  modalRoot.innerHTML = '<div class="modal-backdrop" data-backdrop><section class="modal" role="dialog" aria-modal="true"><div class="modal-head"><h2></h2><button class="modal-close" type="button" aria-label="Close dialog" data-close>&times;</button></div><div class="modal-content"></div></section></div>';
+  modalRoot.querySelector("h2").textContent = title;
+  modalRoot.querySelector(".modal-content").innerHTML = content;
+  modalRoot.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", closeModal));
   modalRoot.querySelector("[data-backdrop]").addEventListener("click", event => {
     if (event.target.matches("[data-backdrop]")) closeModal();
   });
@@ -52,177 +51,136 @@ function openModal(title, content) {
   modalRoot.querySelector("input")?.focus();
 }
 
-function closeModal() {
-  modalRoot.innerHTML = "";
-  document.removeEventListener("keydown", handleEscape);
-}
+$$("[data-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
+$$("[data-go-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.goView)));
+$$("[data-coming-soon]").forEach(button => button.addEventListener("click", () => showToast(button.dataset.comingSoon)));
 
-function handleEscape(event) {
-  if (event.key === "Escape") closeModal();
-}
-
-document.querySelector("#host-button").addEventListener("click", () => {
-  openModal("Host a LAN match", `
-    <p>This will eventually start a match server on this computer so other players on the same network can join.</p>
-    <p><strong>Not connected yet:</strong> this lobby is the first UI prototype. LAN hosting will be implemented after the menu and game flow are in place.</p>
-    <label class="field-label" for="host-name">Player name</label>
-    <input class="field" id="host-name" maxlength="20" placeholder="Enter a name" autocomplete="nickname">
-    <div class="modal-actions"><button class="btn btn-secondary" type="button" data-close>Cancel</button><button class="btn btn-primary" type="button" id="host-confirm">Got it</button></div>
-  `);
-  modalRoot.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", closeModal));
-  modalRoot.querySelector("#host-confirm").addEventListener("click", () => {
-    const name = modalRoot.querySelector("#host-name").value.trim();
+const hostButton = $("#host-button");
+if (hostButton) hostButton.addEventListener("click", () => {
+  openModal("Host a LAN match", '<p>This will eventually start a match server on this computer so other players on the same network can join.</p><p><strong>Not connected yet:</strong> LAN hosting is not implemented in this prototype.</p><label class="field-label" for="host-name">Player name</label><input class="field" id="host-name" maxlength="20" placeholder="Enter a name" autocomplete="nickname"><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close>Cancel</button><button class="btn btn-primary" type="button" id="host-confirm">Got it</button></div>');
+  $("#host-confirm").addEventListener("click", () => {
+    const name = $("#host-name").value.trim();
     closeModal();
-    showToast(name ? `Player name noted: ${name}. LAN hosting isn't wired up yet.` : "LAN hosting isn't wired up yet.");
+    showToast(name ? "Player name noted: " + name + ". LAN hosting is not connected yet." : "LAN hosting is not connected yet.");
   });
 });
-
-document.querySelector("#join-button").addEventListener("click", () => {
-  openModal("Join a LAN match", `
-    <p>Enter the host computer's local network address. Both computers will need to be on the same local network.</p>
-    <p><strong>Not connected yet:</strong> this form is a visual prototype; it does not connect to another computer yet.</p>
-    <label class="field-label" for="host-address">Host address</label>
-    <input class="field" id="host-address" placeholder="Example: 192.168.1.20" inputmode="decimal" autocomplete="off">
-    <div class="modal-actions"><button class="btn btn-secondary" type="button" data-close>Cancel</button><button class="btn btn-primary" type="button" id="join-confirm">Continue</button></div>
-  `);
-  modalRoot.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", closeModal));
-  modalRoot.querySelector("#join-confirm").addEventListener("click", () => {
-    const address = modalRoot.querySelector("#host-address").value.trim();
+const joinButton = $("#join-button");
+if (joinButton) joinButton.addEventListener("click", () => {
+  openModal("Join a LAN match", '<p>Enter the host computer\'s local network address. Both computers must be on the same local network.</p><p><strong>Not connected yet:</strong> LAN joining is not implemented in this prototype.</p><label class="field-label" for="host-address">Host address</label><input class="field" id="host-address" placeholder="Example: 192.168.1.20" inputmode="decimal" autocomplete="off"><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close>Cancel</button><button class="btn btn-primary" type="button" id="join-confirm">Continue</button></div>');
+  $("#join-confirm").addEventListener("click", () => {
+    const address = $("#host-address").value.trim();
     closeModal();
-    showToast(address ? `Address noted: ${address}. LAN joining isn't wired up yet.` : "Enter a host address when LAN joining is implemented.");
+    showToast(address ? "Address noted: " + address + ". LAN joining is not connected yet." : "Enter a host address when LAN joining is implemented.");
   });
 });
-
-document.querySelector("#deploy-button").addEventListener("click", () => {
-  openModal("No match connected", `
-    <p>To deploy, you'll need to host a LAN match or join one hosted by another player.</p>
-    <p>Multiplayer connection code hasn't been added yet, so this button won't launch a match at this stage.</p>
-    <div class="modal-actions"><button class="btn btn-primary" type="button" data-close>Understood</button></div>
-  `);
-  modalRoot.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", closeModal));
+const deployButton = $("#deploy-button");
+if (deployButton) deployButton.addEventListener("click", () => {
+  openModal("No match connected", '<p>To deploy, you will need to host a LAN match or join one hosted by another player.</p><p>Multiplayer connection code has not been added yet, so this button will not launch a match.</p><div class="modal-actions"><button class="btn btn-primary" type="button" data-close>Understood</button></div>');
 });
-
-document.querySelectorAll("[data-go-view]").forEach(button => {
-  button.addEventListener("click", () => showView(button.dataset.goView));
-});
-
-document.querySelectorAll("[data-coming-soon]").forEach(button => {
-  button.addEventListener("click", () => showToast(button.dataset.comingSoon));
-});
-
-document.querySelector("#save-settings").addEventListener("click", () => {
-  const scale = document.querySelector("#ui-scale").value;
+const settingsButton = $("#save-settings");
+if (settingsButton) settingsButton.addEventListener("click", () => {
+  const input = $("#ui-scale");
+  const scale = Math.max(14, Math.min(20, Number(input?.value) || 16));
   document.documentElement.style.fontSize = scale + "px";
   showToast("UI scale applied for this page session.");
 });
 
-
-/* Weapon builder: edits remain a draft until Save Loadout is pressed. */
 const weaponCores = {
-  vanguard: { name:"VANGUARD-01", className:"ASSAULT RIFLE", base:{damage:25,rate:600,recoil:1,reload:2,range:60}, magazine:30 },
-  scope: { name:"SCOPE-01", className:"SNIPER RIFLE", base:{damage:100,rate:40,recoil:3,reload:3,range:150}, magazine:5 },
-  viper: { name:"VIPER-01", className:"SUBMACHINE GUN", base:{damage:15,rate:900,recoil:1.8,reload:1.8,range:30}, magazine:30 },
-  bastion: { name:"BASTION-01", className:"LIGHT MACHINE GUN", base:{damage:20,rate:650,recoil:2.2,reload:4.5,range:70}, magazine:50 },
-  breacher: { name:"BREACHER-01", className:"SHOTGUN", base:{damage:12,rate:70,recoil:2.5,reload:0.6,range:15}, magazine:8 }
+  vanguard: {name:"VANGUARD-01", className:"ASSAULT RIFLE", base:{damage:25,rate:600,recoil:1,reload:2,range:60}},
+  scope: {name:"SCOPE-01", className:"SNIPER RIFLE", base:{damage:100,rate:40,recoil:3,reload:3,range:150}},
+  viper: {name:"VIPER-01", className:"SUBMACHINE GUN", base:{damage:15,rate:900,recoil:1.8,reload:1.8,range:30}},
+  bastion: {name:"BASTION-01", className:"LIGHT MACHINE GUN", base:{damage:20,rate:650,recoil:2.2,reload:4.5,range:70}},
+  breacher: {name:"BREACHER-01", className:"SHOTGUN", base:{damage:12,rate:70,recoil:2.5,reload:0.6,range:15}}
 };
-const partData = {
- barrel: {
-  "ar-standard":{name:"AR Standard Barrel",damage:0,recoil:0,range:0},
-  "ar-heavy":{name:"AR Heavy Barrel",damage:10,recoil:8,range:8},
-  "ar-control":{name:"AR Control Barrel",damage:-5,recoil:-15,range:0},
-  "sniper-long":{name:"Scope Long Barrel",damage:8,recoil:5,range:12},
-  "smg-short":{name:"Viper Short Barrel",damage:-5,recoil:-10,range:-8}
- },
- stock: {
-  "ar-standard":{name:"AR Standard Stock",recoil:0,reload:0},
-  "ar-stable":{name:"AR Stability Stock",recoil:-15,reload:5},
-  "ar-light":{name:"AR Lightweight Stock",recoil:8,reload:-10},
-  "sniper-precision":{name:"Scope Precision Stock",recoil:-10,reload:10},
-  "smg-compact":{name:"Viper Compact Stock",recoil:-5,reload:-8}
- },
- magazine: {
-  "ar-standard":{name:"AR Standard Magazine",capacity:30,damage:0,reload:0},
-  "ar-extended":{name:"AR Extended Magazine",capacity:45,damage:-5,reload:12},
-  "ar-quick":{name:"AR Quick-Load Magazine",capacity:25,damage:0,reload:-15},
-  "sniper-standard":{name:"Scope Standard Magazine",capacity:5,damage:0,reload:0},
-  "smg-extended":{name:"Viper Extended Magazine",capacity:40,damage:-5,reload:10}
- },
- scope: {
-  iron:{name:"Iron Sights",zoom:1},
-  sniper:{name:"Sniper Scope",zoom:4}
- }
+const parts = {
+  barrel: {
+    "ar-standard":{damage:0,recoil:0,range:0}, "ar-heavy":{damage:10,recoil:8,range:8},
+    "ar-control":{damage:-5,recoil:-15,range:0}, "sniper-long":{damage:8,recoil:5,range:12},
+    "smg-short":{damage:-5,recoil:-10,range:-8}
+  },
+  stock: {
+    "ar-standard":{recoil:0,reload:0}, "ar-stable":{recoil:-15,reload:5},
+    "ar-light":{recoil:8,reload:-10}, "sniper-precision":{recoil:-10,reload:10},
+    "smg-compact":{recoil:-5,reload:-8}
+  },
+  magazine: {
+    "ar-standard":{capacity:30,damage:0,reload:0}, "ar-extended":{capacity:45,damage:-5,reload:12},
+    "ar-quick":{capacity:25,damage:0,reload:-15}, "sniper-standard":{capacity:5,damage:0,reload:0},
+    "smg-extended":{capacity:40,damage:-5,reload:10}
+  },
+  scope: {iron:{zoom:1},sniper:{zoom:4}}
 };
-const defaultDraft = {core:"vanguard",barrel:"ar-standard",stock:"ar-standard",magazine:"ar-standard",scope:"iron"};
-let draftLoadout = {...defaultDraft};
-let savedLoadout = {...defaultDraft};
-let savedStats = null;
+const defaults = {core:"vanguard",barrel:"ar-standard",stock:"ar-standard",magazine:"ar-standard",scope:"iron"};
+let draft = {...defaults};
+let saved = {...defaults};
 
-function getDraftStats() {
- const core=weaponCores[draftLoadout.core];
- const base={...core.base};
- const barrel=partData.barrel[draftLoadout.barrel];
- const stock=partData.stock[draftLoadout.stock];
- const mag=partData.magazine[draftLoadout.magazine];
- const apply=(key,pct)=>{base[key]=Math.round(base[key]*(1+pct/100)*100)/100;};
- apply("damage",barrel.damage||0); apply("recoil",barrel.recoil||0);
- apply("range",barrel.range||0);
- apply("recoil",stock.recoil||0); apply("reload",stock.reload||0);
- apply("damage",mag.damage||0); apply("reload",mag.reload||0);
- return { ...base, capacity:mag.capacity, zoom:partData.scope[draftLoadout.scope].zoom };
+function statsFor(loadout) {
+  const result = {...weaponCores[loadout.core].base};
+  const barrel = parts.barrel[loadout.barrel] || {};
+  const stock = parts.stock[loadout.stock] || {};
+  const mag = parts.magazine[loadout.magazine] || {};
+  const apply = (key, percent) => { result[key] = Math.round(result[key] * (1 + percent / 100) * 100) / 100; };
+  apply("damage", barrel.damage || 0); apply("recoil", barrel.recoil || 0); apply("range", barrel.range || 0);
+  apply("recoil", stock.recoil || 0); apply("reload", stock.reload || 0);
+  apply("damage", mag.damage || 0); apply("reload", mag.reload || 0);
+  result.capacity = mag.capacity || 30;
+  result.zoom = parts.scope[loadout.scope]?.zoom || 1;
+  return result;
 }
-function syncBuilderFromDraft() {
- document.querySelectorAll("[data-core]").forEach(button=>{
-  const selected=button.dataset.core===draftLoadout.core;
-  button.classList.toggle("is-selected",selected);
-  button.setAttribute("aria-pressed",String(selected));
-  button.querySelector(".core-check").textContent=selected?"SELECTED":"SELECT";
- });
- ["barrel","stock","magazine","scope"].forEach(slot=>{
-  document.querySelector("#part-"+slot).value=draftLoadout[slot];
- });
- const core=weaponCores[draftLoadout.core];
- const stats=getDraftStats();
- document.querySelector("#preview-weapon-name").textContent=core.name;
- document.querySelector("#preview-weapon-class").textContent=core.className;
- document.querySelector("#preview-mag-capacity").textContent=stats.capacity+" ROUND MAG";
- const statItems=[
-  ["DAMAGE",stats.damage,draftLoadout.core==="breacher"?"per pellet":"per shot"],
-  ["FIRE RATE",stats.rate+" RPM","base rate"],
-  ["RECOIL",stats.recoil,"lower is steadier"],
-  ["RELOAD TIME",stats.reload+(draftDraftIsShotgun()?" sec / shell":" sec"),"lower is faster"],
-  ["RANGE",stats.range+" units","effective range"]
- ];
- document.querySelector("#total-stat-grid").innerHTML=statItems.map(([label,value,note])=>
-  '<div class="total-stat"><span>'+label+'</span><strong>'+value+'</strong><small>'+note+'</small></div>'
- ).join("");
- const changed=JSON.stringify(draftLoadout)!==JSON.stringify(savedLoadout);
- document.querySelector("#saved-status").classList.toggle("has-unsaved",changed);
- document.querySelector("#saved-loadout-name").textContent=weaponCores[savedLoadout.core].name;
- document.querySelector("#save-help").textContent=changed?
-  "Your saved gun is unchanged. Save to use this new configuration in your next match.":
-  "Your current draft matches your saved loadout.";
- document.querySelector("#saved-confirmation").hidden=true;
+function syncBuilder() {
+  $$("[data-core]").forEach(button => {
+    const selected = button.dataset.core === draft.core;
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+    const check = button.querySelector(".core-check");
+    if (check) check.textContent = selected ? "SELECTED" : "SELECT";
+  });
+  ["barrel","stock","magazine","scope"].forEach(slot => {
+    const select = $("#part-" + slot);
+    if (select) select.value = draft[slot];
+  });
+  const core = weaponCores[draft.core];
+  const stats = statsFor(draft);
+  if ($("#preview-weapon-name")) $("#preview-weapon-name").textContent = core.name;
+  if ($("#preview-weapon-class")) $("#preview-weapon-class").textContent = core.className;
+  if ($("#preview-mag-capacity")) $("#preview-mag-capacity").textContent = stats.capacity + " ROUND MAG";
+  if ($("#total-stat-grid")) {
+    const items = [
+      ["DAMAGE", stats.damage, draft.core === "breacher" ? "per pellet" : "per shot"],
+      ["FIRE RATE", stats.rate + " RPM", "base rate"],
+      ["RECOIL", stats.recoil, "lower is steadier"],
+      ["RELOAD TIME", stats.reload + (draft.core === "breacher" ? " sec / shell" : " sec"), "lower is faster"],
+      ["RANGE", stats.range + " units", "effective range"]
+    ];
+    $("#total-stat-grid").innerHTML = items.map(item => '<div class="total-stat"><span>'+item[0]+'</span><strong>'+item[1]+'</strong><small>'+item[2]+'</small></div>').join("");
+  }
+  const changed = JSON.stringify(draft) !== JSON.stringify(saved);
+  if ($("#saved-status")) $("#saved-status").classList.toggle("has-unsaved", changed);
+  if ($("#saved-loadout-name")) $("#saved-loadout-name").textContent = weaponCores[saved.core].name;
+  if ($("#save-help")) $("#save-help").textContent = changed ? "Your saved gun is unchanged. Save to use this new configuration in your next match." : "Your current draft matches your saved loadout.";
+  if ($("#saved-confirmation")) $("#saved-confirmation").hidden = true;
 }
-function draftDraftIsShotgun(){return draftLoadout.core==="breacher";}
-document.querySelectorAll("[data-core]").forEach(button=>button.addEventListener("click",()=>{
- draftLoadout.core=button.dataset.core; syncBuilderFromDraft();
+$$("[data-core]").forEach(button => button.addEventListener("click", () => {
+  if (!weaponCores[button.dataset.core]) return;
+  draft.core = button.dataset.core;
+  syncBuilder();
 }));
-["barrel","stock","magazine","scope"].forEach(slot=>{
- document.querySelector("#part-"+slot).addEventListener("change",event=>{
-  draftLoadout[slot]=event.target.value; syncBuilderFromDraft();
- });
+["barrel","stock","magazine","scope"].forEach(slot => {
+  const select = $("#part-" + slot);
+  if (select) select.addEventListener("change", () => { draft[slot] = select.value; syncBuilder(); });
 });
-document.querySelector("#save-loadout").addEventListener("click",()=>{
- savedLoadout={...draftLoadout};
- savedStats=getDraftStats();
- document.querySelector("#saved-loadout-name").textContent=weaponCores[savedLoadout.core].name;
- document.querySelector("#saved-status").classList.remove("has-unsaved");
- document.querySelector("#save-help").textContent="Saved configuration locked in for your next match.";
- document.querySelector("#saved-confirmation").hidden=false;
- document.querySelector("#saved-confirmation").innerHTML="<span>✓</span> LOADOUT SAVED — "+weaponCores[savedLoadout.core].name+" IS SET FOR YOUR NEXT MATCH.";
- showView("lobby");
- showToast("LOADOUT SAVED SUCCESSFULLY — "+weaponCores[savedLoadout.core].name+" is ready for your next match.");
+const saveButton = $("#save-loadout");
+if (saveButton) saveButton.addEventListener("click", () => {
+  saved = {...draft};
+  syncBuilder();
+  if ($("#saved-confirmation")) {
+    $("#saved-confirmation").hidden = false;
+    $("#saved-confirmation").innerHTML = "<span>✓</span> LOADOUT SAVED — " + weaponCores[saved.core].name + " IS SET FOR YOUR NEXT MATCH.";
+  }
+  showView("lobby");
+  showToast("LOADOUT SAVED SUCCESSFULLY — " + weaponCores[saved.core].name + " is ready for your next match.");
 });
-syncBuilderFromDraft();
 
+syncBuilder();
 showView("lobby");
+})();
