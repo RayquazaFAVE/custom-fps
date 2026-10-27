@@ -75,7 +75,7 @@ if (joinButton) joinButton.addEventListener("click", () => {
 });
 const deployButton = $("#deploy-button");
 if (deployButton) deployButton.addEventListener("click", () => {
-  window.location.href = "game.html";
+  window.location.href = "game.html?v=babylon-1";
 });
 const settingsButton = $("#save-settings");
 if (settingsButton) settingsButton.addEventListener("click", () => {
