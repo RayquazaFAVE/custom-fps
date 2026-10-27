@@ -3,28 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Custom FPS</title>
-  <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #151922;
-      color: #f3f5f7;
-      font-family: system-ui, sans-serif;
-      text-align: center;
-    }
-    main { padding: 2rem; }
-    h1 { margin-bottom: 0.5rem; }
-    p { color: #b8c0cc; }
-  </style>
+  <meta name="theme-color" content="#0b0f14">
+  <title>CustomFPS — Lobby</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
 <body>
-  <main>
-    <h1>Custom FPS</h1>
-    <p>Test page ready.</p>
-    <p>This page confirms the project is connected and running.</p>
-  </main>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand" aria-label="CustomFPS">
+        <div class="brand-mark" aria-hidden="true">C//</div>
+        <div>
+          <div class="brand-name">CUSTOMFPS</div>
+          <div class="brand-sub">LOCAL COMBAT NETWORK</div>
+        </div>
+      </div>
+      <div class="top-status">
+        <span><i class="status-dot"></i>CLIENT READY</span>
+        <span class="profile-level">LEVEL <strong>01</strong></span>
+      </div>
+    </header>
+
+    <main class="main-layout">
+      <nav class="nav-tabs" aria-label="Main menu">
+        <button class="nav-tab" type="button" data-view="lobby" aria-selected="true">LOBBY</button>
+        <button class="nav-tab" type="button" data-view="loadout" aria-selected="false">LOADOUT</button>
+        <button class="nav-tab" type="button" data-view="progression" aria-selected="false">PROGRESSION</button>
+        <button class="nav-tab" type="button" data-view="settings" aria-selected="false">SETTINGS</button>
+      </nav>
+
+      <section id="view-lobby">
+        <div class="page-heading">
+          <div><div class="eyebrow">Main base / Ready room</div><h1>YOUR NEXT MATCH<br>STARTS HERE.</h1></div>
+          <div class="muted" style="font-size:11px; letter-spacing:.12em;">BUILD. DEPLOY. IMPROVE.</div>
+        </div>
+
+        <div class="lobby-grid">
+          <section class="panel" aria-labelledby="map-title">
+            <div class="panel-head"><div><div class="eyebrow">Featured map</div><h2 id="map-title" style="margin-top:6px;">TESTING GROUND</h2></div><span class="map-tag">MAP 001</span></div>
+            <div class="map-visual" role="img" aria-label="Abstract top-down preview of the Testing Ground arena">
+              <span class="map-label top">TRAINING FACILITY // 01</span>
+              <span class="map-coordinates">SECTOR A-01</span>
+              <span class="map-label bottom">TESTING GROUND</span>
+            </div>
+            <div class="map-caption">
+              <div><h3>Purpose-built combat arena</h3><p>A lower central bowl, two parallel lanes known as The Barriers, and symmetrical sniper towers.</p></div>
+              <span class="map-tag">IN DEVELOPMENT</span>
+            </div>
+          </section>
+
+          <section class="panel action-panel" aria-labelledby="deploy-title">
+            <div class="panel-head"><div><div class="eyebrow">Deployment</div><h2 id="deploy-title" style="margin-top:6px;">READY UP</h2></div></div>
+            <div class="panel-body">
+              <div class="connection-state"><strong><i class="status-dot"></i>NO MATCH CONNECTED</strong><span>Host a match or join a player on your LAN.</span></div>
+              <div class="button-stack">
+                <button class="btn btn-primary" id="deploy-button" type="button">Deploy to Match ↗</button>
+                <button class="btn btn-secondary" id="host-button" type="button">Host LAN Match</button>
+                <button class="btn btn-secondary" id="join-button" type="button">Join LAN Match</button>
+              </div>
+              <p class="action-note">LAN PLAY ONLY · The host's computer will run the match server and can also play.</p>
+            </div>
+          </section>
+        </div>
+
+        <div class="bottom-grid">
+          <section class="panel mini-card"><div class="eyebrow">Your arsenal</div><h2 style="margin-top:7px;">BUILD YOUR LOADOUT</h2><p>Choose a core, then tune it with barrels, stocks, magazines, and a scope.</p><button class="text-link" type="button" data-go-view="loadout">Open loadout →</button></section>
+          <section class="panel mini-card"><div class="eyebrow">Progression</div><h2 style="margin-top:7px;">LEVEL 01</h2><div class="progress-track" aria-label="XP progress"><div class="progress-fill"></div></div><div class="progress-label"><span>XP progress</span><span>System not connected</span></div><p>Earn XP through eliminations, victories, and completing matches.</p><button class="text-link" type="button" data-go-view="progression">View progression →</button></section>
+          <section class="panel mini-card"><div class="eyebrow">System</div><h2 style="margin-top:7px;">BUILT FOR LOCAL PLAY</h2><p>A small, focused arena FPS designed to run on modest hardware.</p><button class="text-link" type="button" data-go-view="settings">Open settings →</button></section>
+        </div>
+      </section>
+
+      <section id="view-loadout" hidden>
+        <div class="page-heading"><div><div class="eyebrow">Weapon workshop</div><h1>LOADOUT</h1></div><span class="map-tag">PROTOTYPE</span></div>
+        <section class="panel content-panel"><div class="panel-head"><h2>STARTING CORES</h2><span class="muted" style="font-size:11px;">ONE PER CLASS</span></div><div class="panel-body">
+          <p>Each core determines the weapon's class, base stats, and in-game model. Attachments change performance, but they don't change the model.</p>
+          <div class="weapon-row">
+            <button class="weapon-tile" type="button" data-coming-soon="AR customization will be added in a later step."><span class="weapon-code">CORE 01</span><strong>AR</strong><span>All-rounder</span></button>
+            <button class="weapon-tile" type="button" data-coming-soon="Sniper customization will be added in a later step."><span class="weapon-code">CORE 02</span><strong>SNIPER</strong><span>Long range</span></button>
+            <button class="weapon-tile" type="button" data-coming-soon="SMG customization will be added in a later step."><span class="weapon-code">CORE 03</span><strong>SMG</strong><span>Rapid fire</span></button>
+            <button class="weapon-tile" type="button" data-coming-soon="LMG customization will be added in a later step."><span class="weapon-code">CORE 04</span><strong>LMG</strong><span>Sustained fire</span></button>
+            <button class="weapon-tile" type="button" data-coming-soon="Shotgun customization will be added in a later step."><span class="weapon-code">CORE 05</span><strong>SHOTGUN</strong><span>Close range</span></button>
+          </div>
+          <div class="info-grid">
+            <div class="info-box"><h3>ATTACHMENT SLOTS</h3><p>Barrel · Stock · Magazine · Scope</p></div>
+            <div class="info-box"><h3>BUILD RULE</h3><p>Parts can be mixed across gun models. Scope changes zoom only.</p></div>
+          </div>
+        </div></section>
+      </section>
+
+      <section id="view-progression" hidden>
+        <div class="page-heading"><div><div class="eyebrow">Unlock path</div><h1>PROGRESSION</h1></div><span class="map-tag">LEVEL 01</span></div>
+        <section class="panel content-panel"><div class="panel-head"><h2>YOUR NEXT UNLOCK</h2></div><div class="panel-body">
+          <p>Gain XP by getting eliminations, winning matches, and playing matches to completion.</p>
+          <div class="progress-track"><div class="progress-fill"></div></div>
+          <div class="progress-label"><span>Level 1</span><span>XP tracking not implemented yet</span></div>
+          <div class="info-grid">
+            <div class="info-box"><h3>THREE CHOICES</h3><p>Each level-up offers three guns whose parts you can unlock.</p></div>
+            <div class="info-box"><h3>NO PERMANENT MISSES</h3><p>Unchosen options can appear again at future level-ups.</p></div>
+          </div>
+        </div></section>
+      </section>
+
+      <section id="view-settings" hidden>
+        <div class="page-heading"><div><div class="eyebrow">Personal setup</div><h1>SETTINGS</h1></div><span class="map-tag">LOCAL</span></div>
+        <section class="panel content-panel"><div class="panel-head"><h2>INTERFACE</h2></div><div class="panel-body">
+          <p>These are starter settings for the menu. Gameplay controls and graphics settings will be added when the playable FPS prototype is built.</p>
+          <label class="field-label" for="ui-scale">UI text scale</label>
+          <input class="field" id="ui-scale" type="number" min="14" max="20" value="16" step="1">
+          <div class="modal-actions" style="justify-content:flex-start;"><button class="btn btn-primary" id="save-settings" type="button">Apply UI Scale</button></div>
+        </div></section>
+      </section>
+    </main>
+
+    <footer class="footer"><span>CUSTOMFPS // DEVELOPMENT BUILD</span><span>LOCAL NETWORK COMBAT · BUILD 0.1</span></footer>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
 </body>
 </html>
