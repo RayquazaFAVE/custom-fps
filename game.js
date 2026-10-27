@@ -104,31 +104,69 @@ function startGame(){started=true;paused=false;$("intro").classList.add("hide");
 function togglePause(){if(!started)return;paused=!paused;$("pausemenu").classList.toggle("hide",!paused);if(paused&&document.pointerLockElement)document.exitPointerLock();else if(!paused&&canvas.requestPointerLock)canvas.requestPointerLock();}
 function endGame(win){paused=true;$("endtitle").textContent=win?"TEST COMPLETE":"OPERATOR DOWN";$("endcopy").textContent=win?"All five training drones eliminated. Arena clear.":"You were tagged out during testing. Reset and try again.";$("endmenu").classList.remove("hide");if(document.pointerLockElement)document.exitPointerLock();}
 function leave(){if(document.pointerLockElement)document.exitPointerLock();location.href="index.html";}
+function showDamagePopup(amount){
+ let el=$("damage-popup");
+ if(!el){
+  el=document.createElement("div");el.id="damage-popup";
+  Object.assign(el.style,{position:"absolute",left:"50%",top:"calc(50% - 42px)",transform:"translate(-50%,-50%)",zIndex:"5",font:"900 20px Inter,system-ui,sans-serif",letterSpacing:".04em",color:"#fff",textShadow:"0 2px 5px #000,0 0 8px #000",pointerEvents:"none",opacity:"0",transition:"opacity .08s"});
+  document.body.appendChild(el);
+ }
+ el.textContent="-"+Math.round(amount);
+ el.style.opacity="1";
+ clearTimeout(el._hideTimer);
+ el._hideTimer=setTimeout(()=>{el.style.opacity="0";},650);
+}
+function showImpactDot(point,normal){
+ const dot=B.MeshBuilder.CreateSphere("temporary bullet impact",{diameter:.095,segments:6},scene);
+ const mat=new B.StandardMaterial("black bullet impact material",scene);
+ mat.diffuseColor=B.Color3.Black();mat.emissiveColor=B.Color3.Black();mat.disableLighting=true;
+ dot.material=mat;dot.isPickable=false;
+ dot.position.copyFrom(point);
+ if(normal)dot.position.addInPlace(normal.scale(.035));
+ setTimeout(()=>{if(!dot.isDisposed())dot.dispose();mat.dispose();},1800);
+}
 function shoot(){
  if(!started||paused||reloading||fireCooldown>0)return;
  const w=weapons[weaponIndex];
  if(ammo<=0){showToast("EMPTY MAGAZINE — PRESS R");return;}
- ammo--;fireCooldown=w.rate;gunKick=Math.min(.22,gunKick+.12+w.recoil);recoilKick=Math.min(.16,recoilKick+w.recoil);spreadKick=Math.min(.12,spreadKick+w.spread);muzzleFlash.isVisible=true;setTimeout(()=>{if(muzzleFlash)muzzleFlash.isVisible=false;},55);
- // Kick the weapon model backward/down and nudge the view upward; both recover smoothly.
+ ammo--;fireCooldown=w.rate;
+ // Hitscan: the ray follows the exact center of the camera/crosshair.
+ // Compute the hit before applying this shot's visual recoil.
+ const ray=camera.getForwardRay(w.range);
+ const pick=scene.pickWithRay(ray,m=>m.isPickable&&m.parent!==camera&&m.name!=="skybox"&&!m.name.startsWith("health bar"));
+ const hitPoint=pick&&pick.hit&&pick.pickedPoint?pick.pickedPoint:ray.origin.add(ray.direction.scale(w.range));
+ const hitNormal=pick&&pick.hit&&pick.getNormal?pick.getNormal(true):null;
+ gunKick=Math.min(.22,gunKick+.12+w.recoil);
+ recoilKick=Math.min(.16,recoilKick+w.recoil);
+ spreadKick=Math.min(.12,spreadKick+w.spread);
+ muzzleFlash.isVisible=true;
+ setTimeout(()=>{if(muzzleFlash)muzzleFlash.isVisible=false;},55);
+ // Keep the existing weapon kick and upward camera recoil as visual effects only.
  gun.position.z=.62+gunKick;gun.position.y=-.29-gunKick*.4;
  camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x-w.recoil));
  syncHUD();
- const origin=camera.position.add(camera.getDirection(B.Axis.Z).scale(.55));
- const dir=camera.getForwardRay().direction.clone();
- dir.x+=(Math.random()-.5)*spreadKick;dir.y+=(Math.random()-.5)*spreadKick;dir.z+=(Math.random()-.5)*spreadKick;dir.normalize();
- const ray=new B.Ray(origin,dir,w.range);
- const pick=scene.pickWithRay(ray,m=>targets.some(t=>t.alive&&(m===t.body||m.parent===t.root)));
- const end=pick&&pick.hit?pick.pickedPoint:origin.add(dir.scale(w.range));
- // A brief bright tracer travels visually from the muzzle toward the impact point.
- const tracer=B.MeshBuilder.CreateLines("bullet tracer",{points:[origin,end]},scene);tracer.color=B.Color3.FromHexString(w.color);tracer.alpha=.95;tracer.isPickable=false;
+ // Tracer is cosmetic only; it never decides whether damage is dealt.
+ const muzzle= camera.getDirection(B.Axis.Z);
+ const origin=camera.position.add(muzzle.scale(.55));
+ const tracer=B.MeshBuilder.CreateLines("bullet tracer",{points:[origin,hitPoint]},scene);
+ tracer.color=B.Color3.FromHexString(w.color);tracer.alpha=.95;tracer.isPickable=false;
  setTimeout(()=>{if(!tracer.isDisposed())tracer.dispose();},85);
+ let target=null;
  if(pick&&pick.hit&&pick.pickedMesh){
-  const target=targets.find(t=>t.alive&&(pick.pickedMesh===t.body||pick.pickedMesh.parent===t.root));
-  if(target){
-   const damage=w.damage*(w.pellets||1);target.hp=Math.max(0,target.hp-damage);updateTargetBar(target);
-   if(target.hp<=0){target.alive=false;target.root.setEnabled(false);kills++;syncHUD();showToast("DRONE ELIMINATED");if(kills===5)endGame(true);}
-   else showToast("TARGET HIT · "+Math.round(target.hp)+" HP");
+  target=targets.find(t=>t.alive&&(pick.pickedMesh===t.body||pick.pickedMesh.parent===t.root));
+ }
+ if(target){
+  const damage=w.damage*(w.pellets||1);
+  target.hp=Math.max(0,target.hp-damage);updateTargetBar(target);showDamagePopup(damage);
+  if(target.hp<=0){
+   target.alive=false;target.root.setEnabled(false);kills++;syncHUD();showToast("DRONE ELIMINATED");
+   if(kills===5)endGame(true);
+  }else{
+   $("objective").textContent="Eliminate training drones · "+kills+" / 5";
   }
+ }else if(pick&&pick.hit&&pick.pickedPoint){
+  // A small black mark remains briefly on the surface when the shot hits scenery.
+  showImpactDot(hitPoint,hitNormal);
  }
 }
 function reload(){const w=weapons[weaponIndex];if(!started||paused||reloading||ammo===w.mag)return;reloading=true;reloadTimer=w.reload;showToast("RELOADING…");}
