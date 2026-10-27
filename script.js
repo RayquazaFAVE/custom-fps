@@ -149,4 +149,111 @@ document.querySelectorAll("[data-core]").forEach(button => {
   button.addEventListener("click", () => selectWeaponCore(button.dataset.core));
 });
 
+
+/* Weapon builder: edits remain a draft until Save Loadout is pressed. */
+const weaponCores = {
+  vanguard: { name:"VANGUARD-01", className:"ASSAULT RIFLE", base:{damage:25,rate:600,recoil:1,reload:2,range:60}, magazine:30 },
+  scope: { name:"SCOPE-01", className:"SNIPER RIFLE", base:{damage:100,rate:40,recoil:3,reload:3,range:150}, magazine:5 },
+  viper: { name:"VIPER-01", className:"SUBMACHINE GUN", base:{damage:15,rate:900,recoil:1.8,reload:1.8,range:30}, magazine:30 },
+  bastion: { name:"BASTION-01", className:"LIGHT MACHINE GUN", base:{damage:20,rate:650,recoil:2.2,reload:4.5,range:70}, magazine:50 },
+  breacher: { name:"BREACHER-01", className:"SHOTGUN", base:{damage:12,rate:70,recoil:2.5,reload:0.6,range:15}, magazine:8 }
+};
+const partData = {
+ barrel: {
+  "ar-standard":{name:"AR Standard Barrel",damage:0,recoil:0,range:0},
+  "ar-heavy":{name:"AR Heavy Barrel",damage:10,recoil:8,range:8},
+  "ar-control":{name:"AR Control Barrel",damage:-5,recoil:-15,range:0},
+  "sniper-long":{name:"Scope Long Barrel",damage:8,recoil:5,range:12},
+  "smg-short":{name:"Viper Short Barrel",damage:-5,recoil:-10,range:-8}
+ },
+ stock: {
+  "ar-standard":{name:"AR Standard Stock",recoil:0,reload:0},
+  "ar-stable":{name:"AR Stability Stock",recoil:-15,reload:5},
+  "ar-light":{name:"AR Lightweight Stock",recoil:8,reload:-10},
+  "sniper-precision":{name:"Scope Precision Stock",recoil:-10,reload:10},
+  "smg-compact":{name:"Viper Compact Stock",recoil:-5,reload:-8}
+ },
+ magazine: {
+  "ar-standard":{name:"AR Standard Magazine",capacity:30,damage:0,reload:0},
+  "ar-extended":{name:"AR Extended Magazine",capacity:45,damage:-5,reload:12},
+  "ar-quick":{name:"AR Quick-Load Magazine",capacity:25,damage:0,reload:-15},
+  "sniper-standard":{name:"Scope Standard Magazine",capacity:5,damage:0,reload:0},
+  "smg-extended":{name:"Viper Extended Magazine",capacity:40,damage:-5,reload:10}
+ },
+ scope: {
+  iron:{name:"Iron Sights",zoom:1},
+  sniper:{name:"Sniper Scope",zoom:4}
+ }
+};
+const defaultDraft = {core:"vanguard",barrel:"ar-standard",stock:"ar-standard",magazine:"ar-standard",scope:"iron"};
+let draftLoadout = {...defaultDraft};
+let savedLoadout = {...defaultDraft};
+let savedStats = null;
+
+function getDraftStats() {
+ const core=weaponCores[draftLoadout.core];
+ const base={...core.base};
+ const barrel=partData.barrel[draftLoadout.barrel];
+ const stock=partData.stock[draftLoadout.stock];
+ const mag=partData.magazine[draftLoadout.magazine];
+ const apply=(key,pct)=>{base[key]=Math.round(base[key]*(1+pct/100)*100)/100;};
+ apply("damage",barrel.damage||0); apply("recoil",barrel.recoil||0);
+ apply("range",barrel.range||0);
+ apply("recoil",stock.recoil||0); apply("reload",stock.reload||0);
+ apply("damage",mag.damage||0); apply("reload",mag.reload||0);
+ return { ...base, capacity:mag.capacity, zoom:partData.scope[draftLoadout.scope].zoom };
+}
+function syncBuilderFromDraft() {
+ document.querySelectorAll("[data-core]").forEach(button=>{
+  const selected=button.dataset.core===draftLoadout.core;
+  button.classList.toggle("is-selected",selected);
+  button.setAttribute("aria-pressed",String(selected));
+  button.querySelector(".core-check").textContent=selected?"SELECTED":"SELECT";
+ });
+ ["barrel","stock","magazine","scope"].forEach(slot=>{
+  document.querySelector("#part-"+slot).value=draftLoadout[slot];
+ });
+ const core=weaponCores[draftLoadout.core];
+ const stats=getDraftStats();
+ document.querySelector("#preview-weapon-name").textContent=core.name;
+ document.querySelector("#preview-weapon-class").textContent=core.className;
+ document.querySelector("#preview-mag-capacity").textContent=stats.capacity+" ROUND MAG";
+ const statItems=[
+  ["DAMAGE",stats.damage,draftLoadout.core==="breacher"?"per pellet":"per shot"],
+  ["FIRE RATE",stats.rate+" RPM","base rate"],
+  ["RECOIL",stats.recoil,"lower is steadier"],
+  ["RELOAD TIME",stats.reload+(draftDraftIsShotgun()?" sec / shell":" sec"),"lower is faster"],
+  ["RANGE",stats.range+" units","effective range"]
+ ];
+ document.querySelector("#total-stat-grid").innerHTML=statItems.map(([label,value,note])=>
+  '<div class="total-stat"><span>'+label+'</span><strong>'+value+'</strong><small>'+note+'</small></div>'
+ ).join("");
+ const changed=JSON.stringify(draftLoadout)!==JSON.stringify(savedLoadout);
+ document.querySelector("#saved-status").classList.toggle("has-unsaved",changed);
+ document.querySelector("#saved-loadout-name").textContent=weaponCores[savedLoadout.core].name;
+ document.querySelector("#save-help").textContent=changed?
+  "Your saved gun is unchanged. Save to use this new configuration in your next match.":
+  "Your current draft matches your saved loadout.";
+ document.querySelector("#saved-confirmation").hidden=true;
+}
+function draftDraftIsShotgun(){return draftLoadout.core==="breacher";}
+document.querySelectorAll("[data-core]").forEach(button=>button.addEventListener("click",()=>{
+ draftLoadout.core=button.dataset.core; syncBuilderFromDraft();
+}));
+["barrel","stock","magazine","scope"].forEach(slot=>{
+ document.querySelector("#part-"+slot).addEventListener("change",event=>{
+  draftLoadout[slot]=event.target.value; syncBuilderFromDraft();
+ });
+});
+document.querySelector("#save-loadout").addEventListener("click",()=>{
+ savedLoadout={...draftLoadout};
+ savedStats=getDraftStats();
+ document.querySelector("#saved-loadout-name").textContent=weaponCores[savedLoadout.core].name;
+ document.querySelector("#saved-status").classList.remove("has-unsaved");
+ document.querySelector("#save-help").textContent="Saved configuration locked in for your next match.";
+ document.querySelector("#saved-confirmation").hidden=false;
+ document.querySelector("#saved-confirmation").innerHTML="<span>✓</span> LOADOUT SAVED — "+weaponCores[savedLoadout.core].name+" IS SET FOR YOUR NEXT MATCH.";
+});
+syncBuilderFromDraft();
+
 showView("lobby");
