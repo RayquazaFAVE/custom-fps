@@ -5,8 +5,15 @@ if(!window.BABYLON){$("engine-error").classList.remove("hide");return;}
 const B=window.BABYLON;
 const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:false,powerPreference:"low-power"});
 engine.setHardwareScalingLevel(Math.max(1,window.devicePixelRatio>1?1.35:1));
-let scene,camera,playerRoot,started=false,paused=false,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0;
+let scene,camera,started=false,paused=false,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,weaponIndex=0,recoilKick=0,gunKick=0,spreadKick=0,slideTimer=0,slideDX=0,slideDZ=0,crouched=false;
 const MOVE_SPEED=8, ARENA=100;
+const weapons=[
+ {name:"VANGUARD AR",damage:25,rate:.14,recoil:.018,spread:.012,mag:30,range:100,color:"#b7f34a",reload:1.25},
+ {name:"RIPTIDE SMG",damage:12,rate:.075,recoil:.009,spread:.025,mag:36,range:75,color:"#63d7ff",reload:1.35},
+ {name:"BREACH SHOTGUN",damage:12,rate:.65,recoil:.055,spread:.09,mag:8,range:35,color:"#ffbd59",reload:1.65,pellets:6},
+ {name:"LONGSHOT SNIPER",damage:100,rate:.9,recoil:.09,spread:.001,mag:5,range:140,color:"#ff78a8",reload:1.8},
+ {name:"BULWARK LMG",damage:20,rate:.19,recoil:.028,spread:.02,mag:60,range:90,color:"#c7a5ff",reload:2}
+];
 function material(name,color,roughness=1,emissive=null){const m=new B.StandardMaterial(name,scene);m.diffuseColor=B.Color3.FromHexString(color);m.specularColor=new B.Color3(.12,.12,.12);m.roughness=roughness;if(emissive)m.emissiveColor=B.Color3.FromHexString(emissive);return m;}
 function block(name,x,y,z,sx,sy,sz,mat){const o=B.MeshBuilder.CreateBox(name,{width:sx,height:sy,depth:sz},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
 function flat(name,x,z,sx,sz,y,mat){const o=B.MeshBuilder.CreateGround(name,{width:sx,height:sz,subdivisions:1},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
@@ -44,35 +51,97 @@ for(const z of [8,92]){
 camera=new B.UniversalCamera("player camera",new B.Vector3(50,1.7,15),scene);camera.attachControl(canvas,true);camera.inertia=0;camera.angularSensibility=2400;camera.speed=0;camera.minZ=.08;camera.fov=Math.PI/2.8;camera.checkCollisions=true;camera.applyGravity=false;camera.ellipsoid=new B.Vector3(.35,.85,.35);camera.ellipsoidOffset=new B.Vector3(0,.8,0);camera.keysUp=[87,38];camera.keysDown=[83,40];camera.keysLeft=[65];camera.keysRight=[68];camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 camera.rotation.set(0,0,0);
 // Simple first-person rifle silhouette.
-const gunMat=material("rifle body","#18252c"),gunAccent=material("rifle accent","#b7f34a",.4,"#334a11");
-const gun=B.MeshBuilder.CreateBox("rifle receiver",{width:.22,height:.17,depth:.65},scene);gun.material=gunMat;gun.parent=camera;gun.position.set(.34,-.29,.62);
-const barrelMesh=B.MeshBuilder.CreateCylinder("rifle barrel",{height:.48,diameter:.055},scene);barrelMesh.rotation.x=Math.PI/2;barrelMesh.material=gunAccent;barrelMesh.parent=camera;barrelMesh.position.set(.34,-.25,.23);
+const gunMat=material("weapon body","#18252c"),gunAccent=material("weapon accent",weapons[0].color,.4,weapons[0].color);
+gun=B.MeshBuilder.CreateBox("rifle receiver",{width:.22,height:.17,depth:.65},scene);gun.material=gunMat;gun.parent=camera;gun.position.set(.34,-.29,.62);
+barrelMesh=B.MeshBuilder.CreateCylinder("rifle barrel",{height:.48,diameter:.055},scene);barrelMesh.rotation.x=Math.PI/2;barrelMesh.material=gunAccent;barrelMesh.parent=camera;barrelMesh.position.set(.34,-.25,.23);
 const sight=B.MeshBuilder.CreateBox("rifle sight",{width:.07,height:.06,depth:.12},scene);sight.material=gunAccent;sight.parent=camera;sight.position.set(.34,-.17,.55);
+muzzleFlash=B.MeshBuilder.CreateSphere("muzzle flash",{diameter:.18,segments:6},scene);muzzleFlash.parent=camera;muzzleFlash.position.set(.34,-.25,-.05);muzzleFlash.material=new B.StandardMaterial("muzzle flash material",scene);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.isVisible=false;
 createTargets();return scene;
 }
-function createTargets(){targets=[];const spots=[[25,1.1,35],[38,1.1,48],[50,1.1,60],[64,1.1,43],[76,1.1,68]];spots.forEach((v,i)=>{const root=new B.TransformNode("drone root "+i,scene);root.position.set(v[0],v[1],v[2]);const body=B.MeshBuilder.CreateSphere("drone body",{diameter:.75,segments:8},scene);body.parent=root;body.material=material("drone shell "+i,"#52666a");const eye=B.MeshBuilder.CreateBox("drone eye",{width:.38,height:.08,depth:.08},scene);eye.parent=root;eye.position.z=-.34;eye.material=material("drone eye glow "+i,"#b7f34a",.4,"#b7f34a");const ring=B.MeshBuilder.CreateTorus("drone ring",{diameter:1.05,thickness:.045,tessellation:12},scene);ring.parent=root;ring.rotation.x=Math.PI/2;ring.material=material("drone ring mat "+i,"#b7f34a",.4,"#273b0c");targets.push({root,alive:true,hp:2,phase:i*1.2,baseY:v[1]});});}
+function createTargets(){
+ targets=[];
+ const spots=[[25,1.1,35],[38,1.1,48],[50,1.1,60],[64,1.1,43],[76,1.1,68]];
+ spots.forEach((v,i)=>{
+  const root=new B.TransformNode("drone root "+i,scene);root.position.set(v[0],v[1],v[2]);
+  const shell=material("drone shell "+i,"#52666a");
+  const body=B.MeshBuilder.CreateSphere("drone body",{diameter:.9,segments:10},scene);body.parent=root;body.material=shell;body.isPickable=true;
+  const eye=B.MeshBuilder.CreateBox("drone eye",{width:.38,height:.08,depth:.08},scene);eye.parent=root;eye.position.z=-.41;eye.material=material("drone eye glow "+i,"#b7f34a",.4,"#b7f34a");eye.isPickable=true;
+  const ring=B.MeshBuilder.CreateTorus("drone ring",{diameter:1.15,thickness:.045,tessellation:12},scene);ring.parent=root;ring.rotation.x=Math.PI/2;ring.material=material("drone ring mat "+i,"#b7f34a",.4,"#273b0c");ring.isPickable=true;
+  // Floating health bar: dark backing plus a colored fill that shrinks with damage.
+  const barRoot=new B.TransformNode("health bar root "+i,scene);barRoot.parent=root;barRoot.position.set(0,.9,0);
+  const back=B.MeshBuilder.CreatePlane("health bar backing "+i,{width:1.35,height:.14},scene);back.parent=barRoot;back.position.z=-.04;back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=material("health bar dark "+i,"#142024");back.isPickable=false;
+  const fill=B.MeshBuilder.CreatePlane("health bar fill "+i,{width:1.25,height:.075},scene);fill.parent=barRoot;fill.position.z=-.02;fill.billboardMode=B.Mesh.BILLBOARDMODE_ALL;fill.material=material("health bar fill mat "+i,"#70ed63",.5,"#285d20");fill.isPickable=false;
+  targets.push({root,body,alive:true,hp:100,maxHp:100,phase:i*1.2,baseY:v[1],barRoot,barFill:fill});
+ });
+}
 function showToast(s){const el=$("toast");el.textContent=s;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1300);}
-function syncHUD(){$("health").textContent=health;$("hpbar").style.width=health+"%";$("ammo").textContent=ammo;$("objective").textContent="Eliminate training drones · "+kills+" / 5";}
-function resetGame(){health=100;ammo=30;kills=0;reloading=false;reloadTimer=0;fireCooldown=0;camera.position.set(50,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach((t,i)=>{t.alive=true;t.hp=2;t.root.setEnabled(true);});syncHUD();}
+function syncHUD(){$("health").textContent=health;$("hpbar").style.width=health+"%";$("ammo").textContent=ammo;$("objective").textContent="Eliminate training drones · "+kills+" / 5";const w=weapons[weaponIndex];$("weapon-name").textContent=w.name;$("ammo").textContent=ammo;$("weapon-slots").textContent="1 AR · 2 SMG · 3 SG · 4 SR · 5 LMG";}
+function resetGame(){health=100;kills=0;weaponIndex=0;ammo=weapons[0].mag;reloading=false;reloadTimer=0;fireCooldown=0;recoilKick=0;gunKick=0;spreadKick=0;slideTimer=0;crouched=false;camera.position.set(50,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
+function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
+function equipWeapon(i){if(i<0||i>=weapons.length||i===weaponIndex)return;weaponIndex=i;const w=weapons[i];ammo=w.mag;reloading=false;reloadTimer=0;fireCooldown=0;gun.material.diffuseColor=B.Color3.FromHexString("#18252c");barrelMesh.material.diffuseColor=B.Color3.FromHexString(w.color);barrelMesh.material.emissiveColor=B.Color3.FromHexString(w.color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(w.color);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(w.color);syncHUD();showToast("EQUIPPED: "+w.name);}
 function startGame(){started=true;paused=false;$("intro").classList.add("hide");$("pausemenu").classList.add("hide");canvas.focus();if(canvas.requestPointerLock)canvas.requestPointerLock();}
 function togglePause(){if(!started)return;paused=!paused;$("pausemenu").classList.toggle("hide",!paused);if(paused&&document.pointerLockElement)document.exitPointerLock();else if(!paused&&canvas.requestPointerLock)canvas.requestPointerLock();}
 function endGame(win){paused=true;$("endtitle").textContent=win?"TEST COMPLETE":"OPERATOR DOWN";$("endcopy").textContent=win?"All five training drones eliminated. Arena clear.":"You were tagged out during testing. Reset and try again.";$("endmenu").classList.remove("hide");if(document.pointerLockElement)document.exitPointerLock();}
 function leave(){if(document.pointerLockElement)document.exitPointerLock();location.href="index.html";}
-function shoot(){if(!started||paused||reloading||fireCooldown>0)return;if(ammo<=0){showToast("EMPTY MAGAZINE — PRESS R");return;}ammo--;fireCooldown=.12;syncHUD();const ray=new B.Ray(camera.position,camera.getForwardRay().direction,80);const pick=scene.pickWithRay(ray,m=>targets.some(t=>t.alive&&(m===t.root||m.parent===t.root)));if(pick&&pick.hit&&pick.pickedMesh){const target=targets.find(t=>t.alive&&(pick.pickedMesh===t.root||pick.pickedMesh.parent===t.root));if(target){target.hp--;if(target.hp<=0){target.alive=false;target.root.setEnabled(false);kills++;syncHUD();showToast("DRONE ELIMINATED");if(kills===5)endGame(true);}else showToast("TARGET HIT");}}}
-function reload(){if(!started||paused||reloading||ammo===30)return;reloading=true;reloadTimer=1.15;showToast("RELOADING…");}
-function update(dt){if(!started||paused)return;fireCooldown=Math.max(0,fireCooldown-dt);if(reloading){reloadTimer-=dt;if(reloadTimer<=0){ammo=30;reloading=false;syncHUD();showToast("MAGAZINE RELOADED");}}
-let forward=0,right=0;if(keys.KeyW||keys.ArrowUp)forward++;if(keys.KeyS||keys.ArrowDown)forward--;if(keys.KeyD)right++;if(keys.KeyA)right--;const len=Math.hypot(forward,right)||1;forward/=len;right/=len;
-const yaw=camera.rotation.y;const dx=(Math.sin(yaw)*forward+Math.cos(yaw)*right)*MOVE_SPEED*dt;const dz=(Math.cos(yaw)*forward-Math.sin(yaw)*right)*MOVE_SPEED*dt;
-const old=camera.position.clone();camera.position.x+=dx;camera.position.z+=dz;
-if(camera.position.x<2||camera.position.x>98||camera.position.z<2||camera.position.z>98||scene.meshes.some(m=>m.checkCollisions&&m.isEnabled()&&m.getBoundingInfo&&m.name!=="player camera"&&m.intersectsPoint(new B.Vector3(camera.position.x,camera.position.y-.7,camera.position.z)))){camera.position.x=old.x;camera.position.z=old.z;}
-if(keys.Space&&onGround){jumpVelocity=6.5;onGround=false;keys.Space=false;}if(!onGround||camera.position.y>1.7){jumpVelocity-=18*dt;camera.position.y+=jumpVelocity*dt;if(camera.position.y<=1.7){camera.position.y=1.7;jumpVelocity=0;onGround=true;}}
-targets.forEach(t=>{if(t.alive){t.root.position.y=t.baseY+Math.sin(performance.now()*.002+t.phase)*.12;t.root.rotation.y+=dt*.5;if(Math.random()<dt*.012){health=Math.max(0,health-1);syncHUD();if(health===0)endGame(false);}}});
+function shoot(){
+ if(!started||paused||reloading||fireCooldown>0)return;
+ const w=weapons[weaponIndex];
+ if(ammo<=0){showToast("EMPTY MAGAZINE — PRESS R");return;}
+ ammo--;fireCooldown=w.rate;gunKick=Math.min(.22,gunKick+.12+w.recoil);recoilKick=Math.min(.16,recoilKick+w.recoil);spreadKick=Math.min(.12,spreadKick+w.spread);muzzleFlash.isVisible=true;setTimeout(()=>{if(muzzleFlash)muzzleFlash.isVisible=false;},55);
+ // Kick the weapon model backward/down and nudge the view upward; both recover smoothly.
+ gun.position.z=.62+gunKick;gun.position.y=-.29-gunKick*.4;
+ camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x-w.recoil));
+ syncHUD();
+ const origin=camera.position.add(camera.getDirection(B.Axis.Z).scale(.55));
+ const dir=camera.getForwardRay().direction.clone();
+ dir.x+=(Math.random()-.5)*spreadKick;dir.y+=(Math.random()-.5)*spreadKick;dir.z+=(Math.random()-.5)*spreadKick;dir.normalize();
+ const ray=new B.Ray(origin,dir,w.range);
+ const pick=scene.pickWithRay(ray,m=>targets.some(t=>t.alive&&(m===t.body||m.parent===t.root)));
+ const end=pick&&pick.hit?pick.pickedPoint:origin.add(dir.scale(w.range));
+ // A brief bright tracer travels visually from the muzzle toward the impact point.
+ const tracer=B.MeshBuilder.CreateLines("bullet tracer",{points:[origin,end]},scene);tracer.color=B.Color3.FromHexString(w.color);tracer.alpha=.95;tracer.isPickable=false;
+ setTimeout(()=>{if(!tracer.isDisposed())tracer.dispose();},85);
+ if(pick&&pick.hit&&pick.pickedMesh){
+  const target=targets.find(t=>t.alive&&(pick.pickedMesh===t.body||pick.pickedMesh.parent===t.root));
+  if(target){
+   const damage=w.damage*(w.pellets||1);target.hp=Math.max(0,target.hp-damage);updateTargetBar(target);
+   if(target.hp<=0){target.alive=false;target.root.setEnabled(false);kills++;syncHUD();showToast("DRONE ELIMINATED");if(kills===5)endGame(true);}
+   else showToast("TARGET HIT · "+Math.round(target.hp)+" HP");
+  }
+ }
+}
+function reload(){const w=weapons[weaponIndex];if(!started||paused||reloading||ammo===w.mag)return;reloading=true;reloadTimer=w.reload;showToast("RELOADING…");}
+function update(dt){
+ if(!started||paused)return;
+ fireCooldown=Math.max(0,fireCooldown-dt);
+ if(reloading){reloadTimer-=dt;if(reloadTimer<=0){ammo=weapons[weaponIndex].mag;reloading=false;syncHUD();showToast("MAGAZINE RELOADED");}}
+ recoilKick=Math.max(0,recoilKick-dt*.055);gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
+ if(gun){gun.position.z=.62+gunKick;gun.position.y=-.29-gunKick*.4;}
+ if(slideTimer>0){slideTimer=Math.max(0,slideTimer-dt);camera.position.x+=slideDX*dt;camera.position.z+=slideDZ*dt;camera.position.y=1.15;if(slideTimer===0){slideDX=0;slideDZ=0;}}
+ else{
+  const crouchHeld=!!(keys.ControlLeft||keys.ControlRight||keys.KeyC);
+  const moving=!!(keys.KeyW||keys.KeyA||keys.KeyS||keys.KeyD);
+  const sprinting=!!(keys.ShiftLeft||keys.ShiftRight)&&moving;
+  if(crouchHeld&&sprinting&&moving&&slideTimer===0){
+   const yaw=camera.rotation.y;let f=(keys.KeyW?1:0)-(keys.KeyS?1:0),r=(keys.KeyD?1:0)-(keys.KeyA?1:0);const len=Math.hypot(f,r)||1;f/=len;r/=len;
+   slideDX=(Math.sin(yaw)*f+Math.cos(yaw)*r)*15;slideDZ=(Math.cos(yaw)*f-Math.sin(yaw)*r)*15;slideTimer=.62;showToast("SLIDE");camera.position.y=1.15;
+  }else{
+   crouched=crouchHeld;const targetY=crouched?1.05:1.7;camera.position.y+=(targetY-camera.position.y)*Math.min(1,dt*12);
+   let forward=0,right=0;if(keys.KeyW||keys.ArrowUp)forward++;if(keys.KeyS||keys.ArrowDown)forward--;if(keys.KeyD)right++;if(keys.KeyA)right--;const len=Math.hypot(forward,right)||1;forward/=len;right/=len;
+   const speed=crouched?3.2:sprinting?12:MOVE_SPEED;const yaw=camera.rotation.y;const dx=(Math.sin(yaw)*forward+Math.cos(yaw)*right)*speed*dt;const dz=(Math.cos(yaw)*forward-Math.sin(yaw)*right)*speed*dt;
+   const old=camera.position.clone();camera.position.x+=dx;camera.position.z+=dz;
+   if(camera.position.x<2||camera.position.x>98||camera.position.z<2||camera.position.z>98||scene.meshes.some(m=>m.checkCollisions&&m.isEnabled()&&m.getBoundingInfo&&m.name!=="player camera"&&m.name!=="wide flat plain"&&m.intersectsPoint(new B.Vector3(camera.position.x,camera.position.y-.7,camera.position.z)))){camera.position.x=old.x;camera.position.z=old.z;}
+   if(keys.Space&&onGround){jumpVelocity=6.5;onGround=false;keys.Space=false;}
+   if(!onGround||camera.position.y>targetY){jumpVelocity-=18*dt;camera.position.y+=jumpVelocity*dt;if(camera.position.y<=targetY){camera.position.y=targetY;jumpVelocity=0;onGround=true;}}
+  }
+ }
+ targets.forEach(t=>{if(t.alive){t.root.position.y=t.baseY+Math.sin(performance.now()*.002+t.phase)*.12;t.root.rotation.y+=dt*.5;if(Math.random()<dt*.012){health=Math.max(0,health-1);syncHUD();if(health===0)endGame(false);}}});
 }
 function loop(){const now=performance.now();const dt=Math.min(.04,(now-lastTime)/1000||.016);lastTime=now;if(scene){update(dt);scene.render();} }
 try{createArena();resetGame();engine.runRenderLoop(loop);window.addEventListener("resize",()=>engine.resize());}catch(e){console.error(e);$("engine-error").classList.remove("hide");}
 canvas.addEventListener("click",()=>{if(!started)startGame();else if(!paused){if(document.pointerLockElement===canvas)shoot();else canvas.requestPointerLock?.();}});
 document.addEventListener("mousemove",e=>{if(document.pointerLockElement===canvas&&started&&!paused){camera.rotation.y+=e.movementX*.0023;camera.rotation.x+=e.movementY*.0023;camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x));}});
-document.addEventListener("keydown",e=>{keys[e.code]=true;if(["Space","ArrowUp","ArrowDown"].includes(e.code))e.preventDefault();if(e.code==="Escape"&&started)togglePause();if(e.code==="KeyR")reload();});
+document.addEventListener("keydown",e=>{if(!e.repeat){keys[e.code]=true;if(["Space","ArrowUp","ArrowDown"].includes(e.code))e.preventDefault();if(e.code==="Escape"&&started)togglePause();if(e.code==="KeyR")reload();if(e.code==="KeyE")shoot();if(e.code==="Digit1")equipWeapon(0);if(e.code==="Digit2")equipWeapon(1);if(e.code==="Digit3")equipWeapon(2);if(e.code==="Digit4")equipWeapon(3);if(e.code==="Digit5")equipWeapon(4);}});
 document.addEventListener("keyup",e=>{keys[e.code]=false;});
 $("start").addEventListener("click",startGame);$("pause").addEventListener("click",togglePause);$("resume").addEventListener("click",togglePause);$("exit").addEventListener("click",leave);$("exit2").addEventListener("click",leave);$("exit3").addEventListener("click",leave);$("reload").addEventListener("click",reload);$("again").addEventListener("click",()=>{resetGame();$("endmenu").classList.add("hide");$("intro").classList.remove("hide");started=false;paused=false;});
 })();
