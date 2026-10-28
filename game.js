@@ -220,7 +220,7 @@ function update(dt){
   camera.fov=baseFov/aimZoom;
   const aimBlend=aimHeld?1:0;
   gunRoot.position.x+=((-0.34*aimBlend)-gunRoot.position.x)*Math.min(1,dt*12);
-  gunRoot.position.y+=(((aimHeld?.20:0)-gunKick*.4)-gunRoot.position.y)*Math.min(1,dt*12);
+  gunRoot.position.y+=(((aimHeld ? .20 : 0)-gunKick*.4)-gunRoot.position.y)*Math.min(1,dt*12);
   gunRoot.position.z+=((aimHeld?-.18:0)-gunRoot.position.z)*Math.min(1,dt*12);
   $("scope-overlay").classList.toggle("hide",!(aimHeld&&isScoped));
   $("reticle").classList.toggle("hide",aimHeld&&isScoped);
