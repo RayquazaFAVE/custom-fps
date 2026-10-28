@@ -8,11 +8,11 @@ engine.setHardwareScalingLevel(Math.max(1,window.devicePixelRatio>1?1.35:1));
 let scene,camera,started=false,paused=false,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,weaponIndex=0,recoilKick=0,gunKick=0,spreadKick=0,slideTimer=0,slideDX=0,slideDZ=0,crouched=false,savedLoadout=null;
 const MOVE_SPEED=8, ARENA=100;
 const weapons=[
- {name:"VANGUARD AR",damage:25,rate:.14,recoil:.018,spread:.012,mag:30,range:100,color:"#b7f34a",reload:1.25},
- {name:"RIPTIDE SMG",damage:12,rate:.075,recoil:.009,spread:.025,mag:36,range:75,color:"#63d7ff",reload:1.35},
- {name:"BREACH SHOTGUN",damage:12,rate:.65,recoil:.055,spread:.09,mag:8,range:35,color:"#ffbd59",reload:1.65,pellets:6},
- {name:"LONGSHOT SNIPER",damage:100,rate:.9,recoil:.09,spread:.001,mag:5,range:140,color:"#ff78a8",reload:1.8},
- {name:"BULWARK LMG",damage:20,rate:.19,recoil:.028,spread:.02,mag:60,range:90,color:"#c7a5ff",reload:2}
+ {name:"M4A1 CARBINE",damage:31,rate:.08,recoil:.018,spread:.012,mag:30,range:100,color:"#b7f34a",reload:2.2},
+ {name:"MP5",damage:20,rate:.075,recoil:.009,spread:.025,mag:30,range:75,color:"#63d7ff",reload:2.0},
+ {name:"REMINGTON 870",damage:12,rate:.8,recoil:.055,spread:.09,mag:7,range:35,color:"#ffbd59",reload:.55,pellets:6},
+ {name:"ARCTIC WARFARE",damage:100,rate:1.5,recoil:.09,spread:.001,mag:5,range:140,color:"#ff78a8",reload:2.8},
+ {name:"M249 SAW",damage:24,rate:.08,recoil:.028,spread:.02,mag:100,range:90,color:"#c7a5ff",reload:4.5}
 ];
 const coreToWeapon={vanguard:0,viper:1,breacher:2,scope:3,bastion:4};
 function loadSavedLoadout(){
