@@ -5,7 +5,7 @@ if(!window.BABYLON){$("engine-error").classList.remove("hide");return;}
 const B=window.BABYLON;
 const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:false,powerPreference:"low-power"});
 engine.setHardwareScalingLevel(Math.max(1,window.devicePixelRatio>1?1.35:1));
-let scene,camera,started=false,paused=false,mouseHeld=false,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,weaponIndex=0,recoilKick=0,gunKick=0,spreadKick=0,slideTimer=0,slideDX=0,slideDZ=0,crouched=false,savedLoadout=null;
+let scene,camera,started=false,paused=false,mouseHeld=false,eHeld=false,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,weaponIndex=0,recoilKick=0,gunKick=0,spreadKick=0,slideTimer=0,slideDX=0,slideDZ=0,crouched=false,savedLoadout=null;
 const MOVE_SPEED=8, ARENA=100;
 const weapons=[
  {name:"M4A1 CARBINE",damage:31,rate:.08,recoil:.018,spread:.012,mag:30,range:100,color:"#b7f34a",reload:2.2},
@@ -208,7 +208,7 @@ function update(dt){
  fireCooldown=Math.max(0,fireCooldown-dt);
  // M4A1, MP5, and M249 fire continuously while the left mouse button is held.
  // Shotgun and sniper remain single-shot per click.
- if((mouseHeld||keys.KeyE)&&[0,1,4].includes(weaponIndex)&&!reloading&&fireCooldown<=0)shoot();
+ if((mouseHeld||eHeld)&&[0,1,4].includes(weaponIndex)&&!reloading&&fireCooldown<=0)shoot();
  if(reloading){reloadTimer-=dt;if(reloadTimer<=0){ammo=weapons[weaponIndex].mag;reloading=false;syncHUD();showToast("MAGAZINE RELOADED");}}
  const previousRecoil=recoilKick;recoilKick=Math.max(0,recoilKick-dt*.055);camera.rotation.x=Math.min(1.25,camera.rotation.x+(previousRecoil-recoilKick));gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
  if(gun){gun.position.z=.62+gunKick;gun.position.y=-.29-gunKick*.4;}
@@ -239,7 +239,10 @@ canvas.addEventListener("click",()=>{if(!started)startGame();else if(!paused&&do
 canvas.addEventListener("pointerdown",e=>{if(e.button!==0||!started||paused)return;mouseHeld=true;if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.();shoot();});
 document.addEventListener("pointerup",e=>{if(e.button===0)mouseHeld=false;});
 document.addEventListener("mouseup",e=>{if(e.button===0)mouseHeld=false;});
-window.addEventListener("blur",()=>{mouseHeld=false;keys.KeyE=false;});
+window.addEventListener("blur",()=>{mouseHeld=false;eHeld=false;keys.KeyE=false;});
+// Capture E at the window level so the game still sees it while the canvas has pointer lock.
+window.addEventListener("keydown",e=>{if(e.code!=="KeyE"||!started||paused||![0,1,4].includes(weaponIndex))return;eHeld=true;e.preventDefault();if(!e.repeat)shoot();},true);
+window.addEventListener("keyup",e=>{if(e.code==="KeyE"){eHeld=false;keys.KeyE=false;}},true);
 document.addEventListener("pointerlockchange",()=>{if(document.pointerLockElement!==canvas)mouseHeld=false;});
 document.addEventListener("mousemove",e=>{if(document.pointerLockElement===canvas&&started&&!paused){camera.rotation.y+=e.movementX*.0023;camera.rotation.x+=e.movementY*.0023;camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x));}});
 document.addEventListener("keydown",e=>{if(e.code==="KeyE"&&started&&!paused&&[0,1,4].includes(weaponIndex)){keys.KeyE=true;e.preventDefault();return;}if(!e.repeat){keys[e.code]=true;if(["Space","ArrowUp","ArrowDown"].includes(e.code))e.preventDefault();if(e.code==="Escape"&&started)togglePause();if(e.code==="KeyR")reload();if(e.code==="Digit1")equipWeapon(0);if(e.code==="Digit2")equipWeapon(1);if(e.code==="Digit3")equipWeapon(2);if(e.code==="Digit4")equipWeapon(3);if(e.code==="Digit5")equipWeapon(4);}});
