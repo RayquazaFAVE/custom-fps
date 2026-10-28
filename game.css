@@ -10,3 +10,6 @@
 #scope-overlay .scope-crosshair:before{width:1px;height:100%;left:50%;top:0}
 #scope-overlay .scope-crosshair:after{height:1px;width:100%;left:0;top:50%}
 #scope-overlay .scope-dot{position:absolute;left:50%;top:50%;width:5px;height:5px;transform:translate(-50%,-50%);border-radius:50%;background:#15191a}
+#mp-status{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;font:700 10px Inter,system-ui,sans-serif;letter-spacing:.16em;color:#0b0f14;background:#b7f34a;padding:5px 11px;border-radius:999px;box-shadow:0 2px 6px #0006;opacity:.95}
+#mp-status.hide{display:none}
+#mp-status.connecting{background:#ffd45a}

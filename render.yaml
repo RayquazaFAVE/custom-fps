@@ -1,0 +1,14 @@
+# Render configuration for the CustomFPS multiplayer game server.
+# Docs: https://render.com/docs/yaml
+services:
+  - type: web
+    name: custom-fps
+    runtime: node
+    plan: free
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    rootDir: .
+    envVars:
+      - key: NODE_ENV
+        value: production
