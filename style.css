@@ -278,5 +278,5 @@ p { color: var(--muted); line-height: 1.55; }
 
 
 /* Deployment button follows the site's standard lime accent; keep it stable. */
-#deploy-button { background: var(--accent) !important; color: #10160b !important; border-color: var(--accent) !important; box-shadow: none !important; }
-#deploy-button:hover { background: #c9ff68 !important; border-color: #c9ff68 !important; }
+#deploy-button { background: #b7f34a !important; color: #10160b !important; border-color: #b7f34a !important; box-shadow: none !important; }
+#deploy-button:hover { background: #b7f34a !important; border-color: #b7f34a !important; filter: brightness(1.04); }
