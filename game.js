@@ -213,16 +213,23 @@ function update(dt){
  if(reloading){reloadTimer-=dt;if(reloadTimer<=0){ammo=weapons[weaponIndex].mag;reloading=false;syncHUD();showToast("MAGAZINE RELOADED");}}
  const previousRecoil=recoilKick;recoilKick=Math.max(0,recoilKick-dt*.055);camera.rotation.x=Math.min(1.25,camera.rotation.x+(previousRecoil-recoilKick));gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
  if(gunRoot&&camera){
-  const opticZoom=Number(savedLoadout?.stats?.zoom)||1;
-  const isScoped=opticZoom>=6;
-  const targetZoom=aimHeld?Math.max(1,opticZoom):1;
-  aimZoom+=(targetZoom-aimZoom)*Math.min(1,dt*10);
-  camera.fov=baseFov/aimZoom;
+  // Read the saved attachment itself as a fallback, so scope behavior does not
+  // depend on a calculated stat being present in older saved loadouts.
+  const scopeId=savedLoadout?.loadout?.scope||"iron-sights";
+  const opticZoom=scopeId==="aw-sight"?6:Math.max(1,Number(savedLoadout?.stats?.zoom)||1);
+  const isScoped=scopeId==="aw-sight"||opticZoom>=6;
+  const targetZoom=aimHeld?opticZoom:1;
+  aimZoom+=(targetZoom-aimZoom)*Math.min(1,dt*14);
+  if(Math.abs(targetZoom-aimZoom)<0.015)aimZoom=targetZoom;
+  camera.fov=baseFov/Math.max(1,aimZoom);
+  // Model parts are authored around x=+0.34. Cancel that offset while aiming
+  // so the receiver lines up with the center of the screen.
   const aimBlend=aimHeld?1:0;
-  gunRoot.position.x+=((-0.34*aimBlend)-gunRoot.position.x)*Math.min(1,dt*12);
-  gunRoot.position.y+=(((aimHeld ? .20 : 0)-gunKick*.4)-gunRoot.position.y)*Math.min(1,dt*12);
-  gunRoot.position.z+=((aimHeld?-.18:0)-gunRoot.position.z)*Math.min(1,dt*12);
+  gunRoot.position.x=-0.34*aimBlend;
+  gunRoot.position.y=(aimHeld?0.02:0)-gunKick*.4;
+  gunRoot.position.z=aimHeld?-0.18:0;
   $("scope-overlay").classList.toggle("hide",!(aimHeld&&isScoped));
+  $("scope-overlay").setAttribute("aria-hidden",String(!(aimHeld&&isScoped)));
   $("reticle").classList.toggle("hide",aimHeld&&isScoped);
 }
  if(slideTimer>0){slideTimer=Math.max(0,slideTimer-dt);camera.position.x+=slideDX*dt;camera.position.z+=slideDZ*dt;camera.position.y=1.15;if(slideTimer===0){slideDX=0;slideDZ=0;}}
