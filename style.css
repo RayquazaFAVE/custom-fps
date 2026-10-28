@@ -267,3 +267,11 @@ p { color: var(--muted); line-height: 1.55; }
 .attachment-copy .field option:checked { background:#26391d; color:#d9ff9c; }
 .attachment-copy small { line-height:1.5; }
 @media(max-width:620px) { .attachment-select { padding:13px !important; } .attachment-copy .field { font-size:11px !important; } }
+
+/* Readable attachment menus */
+.attachment-copy .field{width:100%;min-height:46px;padding:12px!important;color:#f1f6f9!important;background:#0b1218!important;border:1px solid #405767!important;border-radius:6px!important;font-size:12px!important;line-height:1.4;font-weight:650;cursor:pointer}
+.attachment-copy .field:hover{border-color:#718896!important}
+.attachment-copy .field:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.attachment-copy .field option{background:#121c25;color:#eef3f7}
+.attachment-select:focus-within{border-color:var(--accent)!important;box-shadow:0 0 0 1px #b7f34a25}
+@media(max-width:620px){.attachment-copy .field{font-size:11px!important}}
