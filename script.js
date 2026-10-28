@@ -115,14 +115,11 @@ const parts = {
     "m249-mag":{capacity:100,damage:-4,reload:18}
   },
   scope: {
-    "m4a1-sight":{zoom:1.25},
-    "mp5-sight":{zoom:1},
-    "870-sight":{zoom:1},
-    "aw-sight":{zoom:6},
-    "m249-sight":{zoom:1.5}
+    "iron-sights":{zoom:1},
+    "aw-sight":{zoom:6}
   }
 };
-const defaults = {core:"vanguard",barrel:"m4a1-barrel",stock:"m4a1-stock",magazine:"m4a1-mag",scope:"m4a1-sight"};
+const defaults = {core:"vanguard",barrel:"m4a1-barrel",stock:"m4a1-stock",magazine:"m4a1-mag",scope:"iron-sights"};
 let draft = {...defaults};
 let saved = {...defaults};
 
