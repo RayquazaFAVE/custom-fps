@@ -92,11 +92,8 @@ const pistolGrip=gunBox("AR pistol grip",.12,.24,.16,.34,-.47,.72,gunGrip);pisto
 gunBox("AR grip base",.13,.045,.17,.34,-.595,.74,gunDark);
 const magazine=gunBox("AR magazine",.145,.28,.18,.34,-.49,.49,gunDark);magazine.rotation.x=-.10;
 gunBox("AR magazine floorplate",.16,.045,.19,.34,-.64,.51,gunAccent);
-// Top rail, optic mount, optic body and glass.
-gunBox("AR top rail",.12,.045,.43,.34,-.145,.55,gunDark);
-gunBox("AR optic mount",.13,.06,.12,.34,-.095,.49,gunAccent);
-gunBox("AR optic housing",.14,.13,.15,.34,-.015,.49,gunDark);
-gunCylinder("AR optic lens",.075,.012,.34,-.015,.405,gunMetal,12);
+// Low-profile top rail only; removed the bulky optic assembly that obstructed the view.
+gunBox("AR top rail",.12,.035,.43,.34,-.145,.55,gunDark);
 // Front sight and rear sight.
 gunBox("AR front sight post",.045,.13,.05,.34,-.17,.22,gunDark);
 gunBox("AR front sight cap",.10,.035,.07,.34,-.105,.22,gunAccent);
