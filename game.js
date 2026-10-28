@@ -208,7 +208,7 @@ function update(dt){
  fireCooldown=Math.max(0,fireCooldown-dt);
  // M4A1, MP5, and M249 fire continuously while the left mouse button is held.
  // Shotgun and sniper remain single-shot per click.
- if(mouseHeld&&[0,1,4].includes(weaponIndex)&&!reloading&&fireCooldown<=0)shoot();
+ if((mouseHeld||keys.KeyE)&&[0,1,4].includes(weaponIndex)&&!reloading&&fireCooldown<=0)shoot();
  if(reloading){reloadTimer-=dt;if(reloadTimer<=0){ammo=weapons[weaponIndex].mag;reloading=false;syncHUD();showToast("MAGAZINE RELOADED");}}
  const previousRecoil=recoilKick;recoilKick=Math.max(0,recoilKick-dt*.055);camera.rotation.x=Math.min(1.25,camera.rotation.x+(previousRecoil-recoilKick));gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
  if(gun){gun.position.z=.62+gunKick;gun.position.y=-.29-gunKick*.4;}
@@ -235,8 +235,11 @@ function update(dt){
 function loop(){const now=performance.now();const dt=Math.min(.04,(now-lastTime)/1000||.016);lastTime=now;if(scene){update(dt);scene.render();} }
 try{createArena();resetGame();engine.runRenderLoop(loop);window.addEventListener("resize",()=>engine.resize());}catch(e){console.error(e);$("engine-error").classList.remove("hide");}
 canvas.addEventListener("click",()=>{if(!started)startGame();else if(!paused&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.();});
-document.addEventListener("mousedown",e=>{if(e.button!==0||!started||paused||document.pointerLockElement!==canvas)return;mouseHeld=true;shoot();});
+// Track held fire independently of pointer-lock state, including the initial press.
+canvas.addEventListener("pointerdown",e=>{if(e.button!==0||!started||paused)return;mouseHeld=true;if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.();shoot();});
+document.addEventListener("pointerup",e=>{if(e.button===0)mouseHeld=false;});
 document.addEventListener("mouseup",e=>{if(e.button===0)mouseHeld=false;});
+window.addEventListener("blur",()=>{mouseHeld=false;keys.KeyE=false;});
 document.addEventListener("pointerlockchange",()=>{if(document.pointerLockElement!==canvas)mouseHeld=false;});
 document.addEventListener("mousemove",e=>{if(document.pointerLockElement===canvas&&started&&!paused){camera.rotation.y+=e.movementX*.0023;camera.rotation.x+=e.movementY*.0023;camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x));}});
 document.addEventListener("keydown",e=>{if(!e.repeat){keys[e.code]=true;if(["Space","ArrowUp","ArrowDown"].includes(e.code))e.preventDefault();if(e.code==="Escape"&&started)togglePause();if(e.code==="KeyR")reload();if(e.code==="KeyE")shoot();if(e.code==="Digit1")equipWeapon(0);if(e.code==="Digit2")equipWeapon(1);if(e.code==="Digit3")equipWeapon(2);if(e.code==="Digit4")equipWeapon(3);if(e.code==="Digit5")equipWeapon(4);}});
