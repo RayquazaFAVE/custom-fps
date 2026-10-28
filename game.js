@@ -5,7 +5,7 @@ if(!window.BABYLON){$("engine-error").classList.remove("hide");return;}
 const B=window.BABYLON;
 const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:false,powerPreference:"low-power"});
 engine.setHardwareScalingLevel(Math.max(1,window.devicePixelRatio>1?1.35:1));
-let scene,camera,started=false,paused=false,mouseHeld=false,eHeld=false,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,weaponIndex=0,recoilKick=0,gunKick=0,spreadKick=0,slideTimer=0,slideDX=0,slideDZ=0,crouched=false,savedLoadout=null;
+let scene,camera,gunRoot=null,baseFov=Math.PI/2.8,started=false,paused=false,mouseHeld=false,eHeld=false,aimHeld=false,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,weaponIndex=0,recoilKick=0,gunKick=0,spreadKick=0,slideTimer=0,slideDX=0,slideDZ=0,crouched=false,savedLoadout=null;
 const MOVE_SPEED=8, ARENA=100;
 const weapons=[
  {name:"M4A1 CARBINE",damage:31,rate:.08,recoil:.018,spread:.012,mag:30,range:100,color:"#b7f34a",reload:2.2},
@@ -66,14 +66,15 @@ for(const z of [8,92]){
 }
 // A few low pieces of cover are scattered across the otherwise empty plain.
 [[25,25],[50,25],[75,25],[25,50],[75,50],[25,75],[50,75],[75,75]].forEach(([x,z])=>block("field cover",x,.65,z,3,1.3,2,cover));
-camera=new B.UniversalCamera("player camera",new B.Vector3(50,1.7,15),scene);camera.attachControl(canvas,true);camera.inertia=0;camera.angularSensibility=2400;camera.speed=0;camera.minZ=.08;camera.fov=Math.PI/2.8;camera.checkCollisions=true;camera.applyGravity=false;camera.ellipsoid=new B.Vector3(.35,.85,.35);camera.ellipsoidOffset=new B.Vector3(0,.8,0);camera.keysUp=[87,38];camera.keysDown=[83,40];camera.keysLeft=[65];camera.keysRight=[68];camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
+camera=new B.UniversalCamera("player camera",new B.Vector3(50,1.7,15),scene);camera.attachControl(canvas,true);camera.inertia=0;camera.angularSensibility=2400;camera.speed=0;camera.minZ=.08;camera.fov=baseFov=Math.PI/2.8;camera.checkCollisions=true;camera.applyGravity=false;camera.ellipsoid=new B.Vector3(.35,.85,.35);camera.ellipsoidOffset=new B.Vector3(0,.8,0);camera.keysUp=[87,38];camera.keysDown=[83,40];camera.keysLeft=[65];camera.keysRight=[68];camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 camera.rotation.set(0,0,0);
 // Stylized medium-detail AR, built from real Babylon.js meshes (no external asset loader).
 // The camera-local Z axis points down the rifle toward its muzzle.
 const gunMat=material("AR graphite body","#263238"),gunAccent=material("AR accent",weapons[0].color,.45,weapons[0].color);
 const gunDark=material("AR dark components","#11191e"),gunMetal=material("AR metal","#7b898b"),gunGrip=material("AR grip","#35464a");
-function gunBox(name,w,h,d,x,y,z,mat){const m=B.MeshBuilder.CreateBox(name,{width:w,height:h,depth:d},scene);m.material=mat;m.parent=camera;m.position.set(x,y,z);return m;}
-function gunCylinder(name,diameter,length,x,y,z,mat,segments=12){const m=B.MeshBuilder.CreateCylinder(name,{height:length,diameter, tessellation:segments},scene);m.rotation.x=Math.PI/2;m.material=mat;m.parent=camera;m.position.set(x,y,z);return m;}
+gunRoot=new B.TransformNode("weapon viewmodel root",scene);gunRoot.parent=camera;
+function gunBox(name,w,h,d,x,y,z,mat){const m=B.MeshBuilder.CreateBox(name,{width:w,height:h,depth:d},scene);m.material=mat;m.parent=gunRoot;m.position.set(x,y,z);return m;}
+function gunCylinder(name,diameter,length,x,y,z,mat,segments=12){const m=B.MeshBuilder.CreateCylinder(name,{height:length,diameter, tessellation:segments},scene);m.rotation.x=Math.PI/2;m.material=mat;m.parent=gunRoot;m.position.set(x,y,z);return m;}
 // Receiver and raised upper receiver.
 gun=gunBox("AR lower receiver",.22,.17,.48,.34,-.29,.60,gunMat);
 gunBox("AR upper receiver",.205,.095,.49,.34,-.205,.60,gunDark);
@@ -106,7 +107,7 @@ gunBox("AR charging handle",.055,.035,.10,.46,-.17,.72,gunMetal);
 for(let i=0;i<5;i++)gunBox("AR handguard rib "+i,.025,.035,.045,.455,-.27,.19+i*.065,gunMetal);
 // Short lower handguard grip.
 gunBox("AR foregrip",.11,.14,.105,.34,-.405,.31,gunDark);
-muzzleFlash=B.MeshBuilder.CreateSphere("muzzle flash",{diameter:.18,segments:6},scene);muzzleFlash.parent=camera;muzzleFlash.position.set(.34,-.25,-.15);muzzleFlash.material=new B.StandardMaterial("muzzle flash material",scene);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.isVisible=false;
+muzzleFlash=B.MeshBuilder.CreateSphere("muzzle flash",{diameter:.18,segments:6},scene);muzzleFlash.parent=gunRoot;muzzleFlash.position.set(.34,-.25,-.15);muzzleFlash.material=new B.StandardMaterial("muzzle flash material",scene);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.isVisible=false;
 createTargets();
  // Color the weapon accent to match the saved core.
  const activeWeapon=weapons[weaponIndex];barrelMesh.material.diffuseColor=B.Color3.FromHexString(activeWeapon.color);barrelMesh.material.emissiveColor=B.Color3.FromHexString(activeWeapon.color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(activeWeapon.color);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(activeWeapon.color);
@@ -130,7 +131,7 @@ function createTargets(){
 }
 function showToast(s){const el=$("toast");el.textContent=s;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1300);}
 function syncHUD(){$("health").textContent=health;$("hpbar").style.width=health+"%";$("ammo").textContent=ammo;$("objective").textContent="Eliminate training drones · "+kills+" / 5";const w=weapons[weaponIndex];$("weapon-name").textContent=w.name;$("ammo").textContent=ammo;$("weapon-slots").textContent="1 AR · 2 SMG · 3 SG · 4 SR · 5 LMG";const ammoMax=document.querySelector(".hud em");if(ammoMax)ammoMax.textContent=" / "+w.mag;}
-function resetGame(){health=100;kills=0;ammo=weapons[weaponIndex].mag;reloading=false;reloadTimer=0;fireCooldown=0;recoilKick=0;gunKick=0;spreadKick=0;slideTimer=0;crouched=false;camera.position.set(50,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
+function resetGame(){aimHeld=false;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;kills=0;ammo=weapons[weaponIndex].mag;reloading=false;reloadTimer=0;fireCooldown=0;recoilKick=0;gunKick=0;spreadKick=0;slideTimer=0;crouched=false;camera.position.set(50,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
 function equipWeapon(i){if(i<0||i>=weapons.length||i===weaponIndex)return;weaponIndex=i;const w=weapons[i];ammo=w.mag;reloading=false;reloadTimer=0;fireCooldown=0;gun.material.diffuseColor=B.Color3.FromHexString("#18252c");barrelMesh.material.diffuseColor=B.Color3.FromHexString(w.color);barrelMesh.material.emissiveColor=B.Color3.FromHexString(w.color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(w.color);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(w.color);syncHUD();showToast("EQUIPPED: "+w.name);}
 function startGame(){started=true;paused=false;$("intro").classList.add("hide");$("pausemenu").classList.add("hide");canvas.focus();if(canvas.requestPointerLock)canvas.requestPointerLock();}
@@ -175,7 +176,7 @@ function shoot(){
  muzzleFlash.isVisible=true;
  setTimeout(()=>{if(muzzleFlash)muzzleFlash.isVisible=false;},55);
  // Keep the existing weapon kick and upward camera recoil as visual effects only.
- gun.position.z=.62+gunKick;gun.position.y=-.29-gunKick*.4;
+ gunRoot.position.y=(aimHeld ? .20 : 0)-gunKick*.4;
  camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x-w.recoil));
  syncHUD();
  // Tracer is cosmetic only; it never decides whether damage is dealt.
@@ -211,7 +212,7 @@ function update(dt){
  if((mouseHeld||eHeld)&&[0,1,4].includes(weaponIndex)&&!reloading&&fireCooldown<=0)shoot();
  if(reloading){reloadTimer-=dt;if(reloadTimer<=0){ammo=weapons[weaponIndex].mag;reloading=false;syncHUD();showToast("MAGAZINE RELOADED");}}
  const previousRecoil=recoilKick;recoilKick=Math.max(0,recoilKick-dt*.055);camera.rotation.x=Math.min(1.25,camera.rotation.x+(previousRecoil-recoilKick));gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
- if(gun){gun.position.z=.62+gunKick;gun.position.y=-.29-gunKick*.4;}
+ if(gun){gunRoot.position.y=(aimHeld ? .20 : 0)-gunKick*.4;}
  if(slideTimer>0){slideTimer=Math.max(0,slideTimer-dt);camera.position.x+=slideDX*dt;camera.position.z+=slideDZ*dt;camera.position.y=1.15;if(slideTimer===0){slideDX=0;slideDZ=0;}}
  else{
   const crouchHeld=!!(keys.ControlLeft||keys.ControlRight||keys.KeyC);
@@ -239,7 +240,11 @@ canvas.addEventListener("click",()=>{if(!started)startGame();else if(!paused&&do
 canvas.addEventListener("pointerdown",e=>{if(e.button!==0||!started||paused)return;mouseHeld=true;if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.();shoot();});
 document.addEventListener("pointerup",e=>{if(e.button===0)mouseHeld=false;});
 document.addEventListener("mouseup",e=>{if(e.button===0)mouseHeld=false;});
-window.addEventListener("blur",()=>{mouseHeld=false;eHeld=false;keys.KeyE=false;});
+window.addEventListener("blur",()=>{mouseHeld=false;eHeld=false;aimHeld=false;keys.KeyE=false;});
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
+canvas.addEventListener("pointerdown",e=>{if(e.button===2&&started&&!paused){aimHeld=true;e.preventDefault();}},true);
+document.addEventListener("pointerup",e=>{if(e.button===2)aimHeld=false;});
+document.addEventListener("mouseup",e=>{if(e.button===2)aimHeld=false;});
 // Capture E at the window level so the game still sees it while the canvas has pointer lock.
 window.addEventListener("keydown",e=>{if(e.code!=="KeyE"||!started||paused||![0,1,4].includes(weaponIndex))return;eHeld=true;e.preventDefault();if(!e.repeat)shoot();},true);
 window.addEventListener("keyup",e=>{if(e.code==="KeyE"){eHeld=false;keys.KeyE=false;}},true);
