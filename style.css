@@ -277,6 +277,6 @@ p { color: var(--muted); line-height: 1.55; }
 @media(max-width:620px){.attachment-copy .field{font-size:11px!important}}
 
 
-/* Deployment button version marker: updated for the automatic-fire fix */
-#deploy-button { background: #ff4f8b !important; color: #200813 !important; border-color: #ff8ab0 !important; box-shadow: 0 0 0 1px #ff4f8b55, 0 0 22px #ff4f8b35 !important; }
-#deploy-button:hover { background: #ff78a5 !important; border-color: #ffb0c8 !important; }
+/* Deployment button version marker: blue means the latest input fix is deployed */
+#deploy-button { background: #168cff !important; color: #ffffff !important; border-color: #78c2ff !important; box-shadow: 0 0 0 1px #168cff66, 0 0 24px #168cff55 !important; }
+#deploy-button:hover { background: #43a4ff !important; border-color: #a5d8ff !important; }
