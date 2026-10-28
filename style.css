@@ -255,3 +255,15 @@ p { color: var(--muted); line-height: 1.55; }
 .saved-confirmation span { color:var(--accent); margin-right:8px; }
 @media(max-width:1000px){.builder-core-selection{grid-template-columns:repeat(3,minmax(0,1fr))!important}.total-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:620px){.builder-intro,.save-row{align-items:stretch;flex-direction:column}.saved-status{align-self:flex-start}.builder-core-selection{grid-template-columns:repeat(2,minmax(0,1fr))!important}.attachment-grid{grid-template-columns:1fr}.total-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.save-loadout-button{width:100%}}
+
+
+/* Real-world inspired arsenal: clearer, more readable attachment controls */
+.attachment-select { background: linear-gradient(145deg, #1a2731, #101820) !important; border-color: #344957 !important; transition: border-color .16s ease, background .16s ease; }
+.attachment-select:focus-within { border-color: var(--accent) !important; box-shadow: 0 0 0 1px #b7f34a25; }
+.attachment-copy .field { width:100%; min-height:46px; padding:12px 13px !important; color:#f1f6f9 !important; background-color:#0b1218 !important; border:1px solid #405767 !important; border-radius:6px !important; font-size:12px !important; line-height:1.4; font-weight:650; letter-spacing:.01em; cursor:pointer; }
+.attachment-copy .field:hover { border-color:#718896 !important; }
+.attachment-copy .field:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.attachment-copy .field option { background:#121c25; color:#eef3f7; }
+.attachment-copy .field option:checked { background:#26391d; color:#d9ff9c; }
+.attachment-copy small { line-height:1.5; }
+@media(max-width:620px) { .attachment-select { padding:13px !important; } .attachment-copy .field { font-size:11px !important; } }
