@@ -277,6 +277,6 @@ p { color: var(--muted); line-height: 1.55; }
 @media(max-width:620px){.attachment-copy .field{font-size:11px!important}}
 
 
-/* Deployment button version marker: purple confirms the latest build */
-#deploy-button { background: #9b5cff !important; color: #ffffff !important; border-color: #c7a5ff !important; box-shadow: 0 0 0 1px #9b5cff66, 0 0 24px #9b5cff55 !important; }
-#deploy-button:hover { background: #b184ff !important; border-color: #e0ceff !important; }
+/* Deployment button version marker: orange confirms the latest build */
+#deploy-button { background: #ff8a36 !important; color: #17100a !important; border-color: #ffc08f !important; box-shadow: 0 0 0 1px #ff8a3666, 0 0 24px #ff8a3655 !important; }
+#deploy-button:hover { background: #ffab68 !important; border-color: #ffe0c7 !important; }
