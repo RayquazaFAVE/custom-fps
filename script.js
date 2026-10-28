@@ -86,31 +86,43 @@ if (settingsButton) settingsButton.addEventListener("click", () => {
 });
 
 const weaponCores = {
-  vanguard: {name:"VANGUARD-01", className:"ASSAULT RIFLE", base:{damage:25,rate:600,recoil:1,reload:2,range:60}},
-  scope: {name:"SCOPE-01", className:"SNIPER RIFLE", base:{damage:100,rate:40,recoil:3,reload:3,range:150}},
-  viper: {name:"VIPER-01", className:"SUBMACHINE GUN", base:{damage:15,rate:900,recoil:1.8,reload:1.8,range:30}},
-  bastion: {name:"BASTION-01", className:"LIGHT MACHINE GUN", base:{damage:20,rate:650,recoil:2.2,reload:4.5,range:70}},
-  breacher: {name:"BREACHER-01", className:"SHOTGUN", base:{damage:12,rate:70,recoil:2.5,reload:0.6,range:15}}
+  vanguard: {name:"M4A1 CARBINE", className:"ASSAULT RIFLE", base:{damage:31,rate:750,recoil:1.15,reload:2.2,range:75}},
+  viper: {name:"MP5", className:"SUBMACHINE GUN", base:{damage:20,rate:800,recoil:1.45,reload:2.0,range:38}},
+  breacher: {name:"REMINGTON 870", className:"PUMP-ACTION SHOTGUN", base:{damage:12,rate:75,recoil:3.1,reload:0.55,range:20}},
+  scope: {name:"ARCTIC WARFARE", className:"SNIPER RIFLE", base:{damage:100,rate:40,recoil:3.4,reload:2.8,range:150}},
+  bastion: {name:"M249 SAW", className:"LIGHT MACHINE GUN", base:{damage:24,rate:750,recoil:2.35,reload:4.5,range:85}}
 };
 const parts = {
   barrel: {
-    "ar-standard":{damage:0,recoil:0,range:0}, "ar-heavy":{damage:10,recoil:8,range:8},
-    "ar-control":{damage:-5,recoil:-15,range:0}, "sniper-long":{damage:8,recoil:5,range:12},
-    "smg-short":{damage:-5,recoil:-10,range:-8}
+    "m4a1-barrel":{damage:0,recoil:0,range:0},
+    "mp5-barrel":{damage:-8,recoil:-8,range:-18},
+    "870-barrel":{damage:5,recoil:10,range:-25},
+    "aw-barrel":{damage:12,recoil:8,range:20},
+    "m249-barrel":{damage:4,recoil:12,range:8}
   },
   stock: {
-    "ar-standard":{recoil:0,reload:0}, "ar-stable":{recoil:-15,reload:5},
-    "ar-light":{recoil:8,reload:-10}, "sniper-precision":{recoil:-10,reload:10},
-    "smg-compact":{recoil:-5,reload:-8}
+    "m4a1-stock":{recoil:-5,reload:0},
+    "mp5-stock":{recoil:8,reload:-5},
+    "870-stock":{recoil:-5,reload:0},
+    "aw-stock":{recoil:-18,reload:8},
+    "m249-stock":{recoil:-12,reload:12}
   },
   magazine: {
-    "ar-standard":{capacity:30,damage:0,reload:0}, "ar-extended":{capacity:45,damage:-5,reload:12},
-    "ar-quick":{capacity:25,damage:0,reload:-15}, "sniper-standard":{capacity:5,damage:0,reload:0},
-    "smg-extended":{capacity:40,damage:-5,reload:10}
+    "m4a1-mag":{capacity:30,damage:0,reload:0},
+    "mp5-mag":{capacity:30,damage:0,reload:-5},
+    "870-mag":{capacity:7,damage:0,reload:0},
+    "aw-mag":{capacity:5,damage:0,reload:0},
+    "m249-mag":{capacity:100,damage:-4,reload:18}
   },
-  scope: {iron:{zoom:1},sniper:{zoom:4}}
+  scope: {
+    "m4a1-sight":{zoom:1.25},
+    "mp5-sight":{zoom:1},
+    "870-sight":{zoom:1},
+    "aw-sight":{zoom:6},
+    "m249-sight":{zoom:1.5}
+  }
 };
-const defaults = {core:"vanguard",barrel:"ar-standard",stock:"ar-standard",magazine:"ar-standard",scope:"iron"};
+const defaults = {core:"vanguard",barrel:"m4a1-barrel",stock:"m4a1-stock",magazine:"m4a1-mag",scope:"m4a1-sight"};
 let draft = {...defaults};
 let saved = {...defaults};
 
@@ -137,13 +149,13 @@ function syncBuilder() {
   });
   ["barrel","stock","magazine","scope"].forEach(slot => {
     const select = $("#part-" + slot);
-    if (select) select.value = draft[slot];
+    if (select) { if (!parts[slot][draft[slot]]) draft[slot] = defaults[slot]; select.value = draft[slot]; }
   });
   const core = weaponCores[draft.core];
   const stats = statsFor(draft);
   if ($("#preview-weapon-name")) $("#preview-weapon-name").textContent = core.name;
   if ($("#preview-weapon-class")) $("#preview-weapon-class").textContent = core.className;
-  if ($("#preview-mag-capacity")) $("#preview-mag-capacity").textContent = stats.capacity + " ROUND MAG";
+  if ($("#preview-mag-capacity")) $("#preview-mag-capacity").textContent = stats.capacity + (draft.core === "breacher" ? " SHELL TUBE" : " ROUND MAG");
   if ($("#total-stat-grid")) {
     const items = [
       ["DAMAGE", stats.damage, draft.core === "breacher" ? "per pellet" : "per shot"],
