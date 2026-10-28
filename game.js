@@ -5,7 +5,7 @@ if(!window.BABYLON){$("engine-error").classList.remove("hide");return;}
 const B=window.BABYLON;
 const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:false,powerPreference:"low-power"});
 engine.setHardwareScalingLevel(Math.max(1,window.devicePixelRatio>1?1.35:1));
-let scene,camera,started=false,paused=false,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,weaponIndex=0,recoilKick=0,gunKick=0,spreadKick=0,slideTimer=0,slideDX=0,slideDZ=0,crouched=false,savedLoadout=null;
+let scene,camera,started=false,paused=false,mouseHeld=false,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,weaponIndex=0,recoilKick=0,gunKick=0,spreadKick=0,slideTimer=0,slideDX=0,slideDZ=0,crouched=false,savedLoadout=null;
 const MOVE_SPEED=8, ARENA=100;
 const weapons=[
  {name:"M4A1 CARBINE",damage:31,rate:.08,recoil:.018,spread:.012,mag:30,range:100,color:"#b7f34a",reload:2.2},
@@ -161,7 +161,7 @@ function showImpactDot(point,normal){
 function shoot(){
  if(!started||paused||reloading||fireCooldown>0)return;
  const w=weapons[weaponIndex];
- if(ammo<=0){showToast("EMPTY MAGAZINE — PRESS R");return;}
+ if(ammo<=0){showToast("EMPTY MAGAZINE — PRESS R");mouseHeld=false;return;}
  ammo--;fireCooldown=w.rate;
  // Hitscan: the ray follows the exact center of the camera/crosshair.
  // Compute the hit before applying this shot's visual recoil.
@@ -206,6 +206,9 @@ function reload(){const w=weapons[weaponIndex];if(!started||paused||reloading||a
 function update(dt){
  if(!started||paused)return;
  fireCooldown=Math.max(0,fireCooldown-dt);
+ // M4A1, MP5, and M249 fire continuously while the left mouse button is held.
+ // Shotgun and sniper remain single-shot per click.
+ if(mouseHeld&&[0,1,4].includes(weaponIndex)&&!reloading&&fireCooldown<=0)shoot();
  if(reloading){reloadTimer-=dt;if(reloadTimer<=0){ammo=weapons[weaponIndex].mag;reloading=false;syncHUD();showToast("MAGAZINE RELOADED");}}
  const previousRecoil=recoilKick;recoilKick=Math.max(0,recoilKick-dt*.055);camera.rotation.x=Math.min(1.25,camera.rotation.x+(previousRecoil-recoilKick));gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
  if(gun){gun.position.z=.62+gunKick;gun.position.y=-.29-gunKick*.4;}
@@ -231,7 +234,10 @@ function update(dt){
 }
 function loop(){const now=performance.now();const dt=Math.min(.04,(now-lastTime)/1000||.016);lastTime=now;if(scene){update(dt);scene.render();} }
 try{createArena();resetGame();engine.runRenderLoop(loop);window.addEventListener("resize",()=>engine.resize());}catch(e){console.error(e);$("engine-error").classList.remove("hide");}
-canvas.addEventListener("click",()=>{if(!started)startGame();else if(!paused){if(document.pointerLockElement===canvas)shoot();else canvas.requestPointerLock?.();}});
+canvas.addEventListener("click",()=>{if(!started)startGame();else if(!paused&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.();});
+document.addEventListener("mousedown",e=>{if(e.button!==0||!started||paused||document.pointerLockElement!==canvas)return;mouseHeld=true;shoot();});
+document.addEventListener("mouseup",e=>{if(e.button===0)mouseHeld=false;});
+document.addEventListener("pointerlockchange",()=>{if(document.pointerLockElement!==canvas)mouseHeld=false;});
 document.addEventListener("mousemove",e=>{if(document.pointerLockElement===canvas&&started&&!paused){camera.rotation.y+=e.movementX*.0023;camera.rotation.x+=e.movementY*.0023;camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x));}});
 document.addEventListener("keydown",e=>{if(!e.repeat){keys[e.code]=true;if(["Space","ArrowUp","ArrowDown"].includes(e.code))e.preventDefault();if(e.code==="Escape"&&started)togglePause();if(e.code==="KeyR")reload();if(e.code==="KeyE")shoot();if(e.code==="Digit1")equipWeapon(0);if(e.code==="Digit2")equipWeapon(1);if(e.code==="Digit3")equipWeapon(2);if(e.code==="Digit4")equipWeapon(3);if(e.code==="Digit5")equipWeapon(4);}});
 document.addEventListener("keyup",e=>{keys[e.code]=false;});
