@@ -4,21 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CustomFPS — 3D Testing Ground</title>
-<link rel="stylesheet" href="game.css?v=loadout-1">
+<link rel="stylesheet" href="game.css?v=aim-down-sights-1">
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
-<script src="game.js?v=real-arsenal-1" defer></script>
+<script src="game.js?v=aim-down-sights-1" defer></script>
 </head>
 <body>
 <canvas id="game" aria-label="CustomFPS 3D arena"></canvas>
 <header><b><i>C//</i> CUSTOMFPS <small>TESTING GROUND // 3D PLAYTEST 0.3</small></b><span>LOCAL SIMULATION <button id="pause">PAUSE [ESC]</button> <button id="exit">EXIT TO LOBBY</button></span></header>
 <div class="maptitle"><b>TESTING GROUND</b><small>MAP 001 · OPEN PLAIN</small></div>
-<div class="reticle">+</div>
+<div id="reticle" class="reticle">+</div>
+<div id="scope-overlay" class="hide" aria-hidden="true"><div class="scope-glass"><div class="scope-ring"></div><div class="scope-crosshair"></div><div class="scope-dot"></div></div></div>
 <section class="hud">
 <div><small>VITALS</small><strong id="health">100</strong><div class="meter"><span id="hpbar"></span></div><small>HEALTH</small></div>
 <div class="objective"><small>CURRENT OBJECTIVE</small><strong>TEST THE ARENA</strong><small id="objective">Eliminate training drones · 0 / 5</small></div>
 <div><small><span id="weapon-name">M4A1 CARBINE</span></small><strong><span id="ammo">30</span><em> / 30</em></strong><button id="reload">RELOAD [R]</button><small id="weapon-slots">1 AR · 2 SMG · 3 SG · 4 SR · 5 LMG</small></div>
 </section>
-<div class="controls">WASD MOVE · SHIFT SPRINT · C / CTRL CROUCH · SPRINT + CROUCH SLIDE · CLICK / E FIRE · 1–5 WEAPONS · R RELOAD · SPACE JUMP</div>
+<div class="controls">WASD MOVE · SHIFT SPRINT · C / CTRL CROUCH · SPRINT + CROUCH SLIDE · CLICK / E FIRE · RIGHT-CLICK AIM · 1–5 WEAPONS · R RELOAD · SPACE JUMP</div>
 <div id="intro" class="overlay"><article><small>COMBAT SIMULATION / 001</small><h1>TESTING<br><i>GROUND</i></h1><p>This build uses a real-time 3D engine. Explore the expanded flat arena and clear five training drones. Use 1–5 to switch weapon handling, E or click to fire, and Shift to sprint.</p><button id="start">ENTER ARENA ↗</button><footer>Click to capture mouse · ESC releases it</footer></article></div>
 <div id="pausemenu" class="overlay hide"><article><small>SIMULATION PAUSED</small><h2>TAKE A BREATHER.</h2><button id="resume">RESUME MATCH</button><button id="exit2" class="secondary">RETURN TO LOBBY</button></article></div>
 <div id="endmenu" class="overlay hide"><article><small>OBJECTIVE UPDATE</small><h2 id="endtitle">TEST COMPLETE</h2><p id="endcopy">All targets cleared.</p><button id="again">RUN IT AGAIN</button><button id="exit3" class="secondary">RETURN TO LOBBY</button></article></div>
