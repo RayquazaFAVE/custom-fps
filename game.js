@@ -213,7 +213,7 @@ function update(dt){
   // Read the saved attachment itself as a fallback, so scope behavior does not
   // depend on a calculated stat being present in older saved loadouts.
   const scopeId=savedLoadout?.loadout?.scope||"iron-sights";
-  const opticZoom=scopeId==="aw-sight"?6:Math.max(1,Number(savedLoadout?.stats?.zoom)||1);
+  const opticZoom=scopeId==="aw-sight"?6:scopeId==="iron-sights"?1.5:Math.max(1,Number(savedLoadout?.stats?.zoom)||1);
   const isScoped=scopeId==="aw-sight"||opticZoom>=6;
   const targetZoom=aimHeld?opticZoom:1;
   aimZoom+=(targetZoom-aimZoom)*Math.min(1,dt*14);
