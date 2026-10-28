@@ -115,7 +115,7 @@ const parts = {
     "m249-mag":{capacity:100,damage:-4,reload:18}
   },
   scope: {
-    "iron-sights":{zoom:1},
+    "iron-sights":{zoom:1.5},
     "aw-sight":{zoom:6}
   }
 };
