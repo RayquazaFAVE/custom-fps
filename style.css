@@ -275,3 +275,8 @@ p { color: var(--muted); line-height: 1.55; }
 .attachment-copy .field option{background:#121c25;color:#eef3f7}
 .attachment-select:focus-within{border-color:var(--accent)!important;box-shadow:0 0 0 1px #b7f34a25}
 @media(max-width:620px){.attachment-copy .field{font-size:11px!important}}
+
+
+/* Deployment button version marker: updated for the automatic-fire fix */
+#deploy-button { background: #ff4f8b !important; color: #200813 !important; border-color: #ff8ab0 !important; box-shadow: 0 0 0 1px #ff4f8b55, 0 0 22px #ff4f8b35 !important; }
+#deploy-button:hover { background: #ff78a5 !important; border-color: #ffb0c8 !important; }
