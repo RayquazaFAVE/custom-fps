@@ -7,6 +7,9 @@ const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,
 engine.setHardwareScalingLevel(Math.max(1,window.devicePixelRatio>1?1.35:1));
 let scene,camera,gunRoot=null,baseFov=Math.PI/2.8,started=false,paused=false,mouseHeld=false,eHeld=false,aimHeld=false,aimZoom=1,health=100,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,weaponIndex=0,recoilKick=0,gunKick=0,spreadKick=0,slideTimer=0,slideDX=0,slideDZ=0,crouched=false,savedLoadout=null;
 const MOVE_SPEED=8, ARENA=100;
+// ---- Multiplayer (Socket.IO) ----
+const remotes=new Map();
+let myName="Operator", netSocket=null, netLastSend=0, mpCount=1;
 const weapons=[
  {name:"M4A1 CARBINE",damage:31,rate:.08,recoil:.018,spread:.012,mag:30,range:100,color:"#b7f34a",reload:2.2},
  {name:"MP5",damage:20,rate:.075,recoil:.009,spread:.025,mag:30,range:75,color:"#63d7ff",reload:2.0},
@@ -32,6 +35,7 @@ function loadSavedLoadout(){
  w.name=(savedLoadout.core.name&&savedLoadout.core.className)?savedLoadout.core.name+" · "+savedLoadout.core.className:(savedLoadout.core.name||w.name);
 }
 loadSavedLoadout();
+initNetwork();
 function material(name,color,roughness=1,emissive=null){const m=new B.StandardMaterial(name,scene);m.diffuseColor=B.Color3.FromHexString(color);m.specularColor=new B.Color3(.12,.12,.12);m.roughness=roughness;if(emissive)m.emissiveColor=B.Color3.FromHexString(emissive);return m;}
 function block(name,x,y,z,sx,sy,sz,mat){const o=B.MeshBuilder.CreateBox(name,{width:sx,height:sy,depth:sz},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
 function flat(name,x,z,sx,sz,y,mat){const o=B.MeshBuilder.CreateGround(name,{width:sx,height:sz,subdivisions:1},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
@@ -126,9 +130,81 @@ function createTargets(){
   targets.push({root,body,alive:true,hp:100,maxHp:100,phase:i*1.2,baseY:v[1],barRoot,barFill:fill});
  });
 }
+// ---- Multiplayer (Socket.IO) ----
+function setMpStatus(text,cls){const el=$("mp-status");if(!el)return;el.textContent=text;el.className="mp-status"+(cls?(" "+cls):"");}
+function initNetwork(){
+ try{ if(window.io) netSocket=window.io(); }catch(e){ netSocket=null; }
+ if(!netSocket){setMpStatus("OFFLINE · LOCAL SIMULATION","connecting");return;}
+ setMpStatus("CONNECTING…","connecting");
+ netSocket.on("connect",()=>{setMpStatus("ONLINE · "+mpCount+" PLAYERS","");});
+ netSocket.on("disconnect",()=>{setMpStatus("RECONNECTING…","connecting");});
+ netSocket.on("hello",info=>{if(info&&info.name)myName=info.name;if(info&&info.playerCount)mpCount=info.playerCount;});
+ netSocket.on("player:join",()=>{mpCount++;setMpStatus("ONLINE · "+mpCount+" PLAYERS","");});
+ netSocket.on("player:leave",info=>{if(info&&info.id)removeRemotePlayer(info.id);mpCount=Math.max(1,mpCount-1);setMpStatus("ONLINE · "+mpCount+" PLAYERS","");});
+ netSocket.on("player:update",data=>updateRemotePlayer(data));
+}
+function sendPlayerState(){
+ if(!netSocket||!started||paused||!camera)return;
+ const now=performance.now();
+ if(now-netLastSend<33)return; // ~30 Hz
+ netLastSend=now;
+ try{
+  netSocket.emit("state",{
+   x:camera.position.x,y:camera.position.y,z:camera.position.z,
+   rotY:camera.rotation.y,rotX:camera.rotation.x,
+   health,ammo,weaponIndex,kills,name:myName
+  });
+ }catch(e){}
+}
+function remoteColor(i){return ["#b7f34a","#63d7ff","#ffbd59","#ff78a8","#c7a5ff"][i]||"#b7f34a";}
+function createRemotePlayer(data){
+ const id=data.id, color=remoteColor(data.weaponIndex||0);
+ const root=new B.TransformNode("remote "+id,scene);
+ const bodyMat=material("remote body "+id,"#2b3b40");
+ const accentMat=material("remote accent "+id,color,.5,color);
+ const body=B.MeshBuilder.CreateBox("remote body mesh "+id,{width:.6,height:1.0,depth:.35},scene);body.parent=root;body.material=bodyMat;body.isPickable=false;
+ const head=B.MeshBuilder.CreateSphere("remote head "+id,{diameter:.5,segments:8},scene);head.parent=root;head.position.y=.62;head.material=bodyMat;head.isPickable=false;
+ const gunMesh=B.MeshBuilder.CreateBox("remote gun "+id,{width:.08,height:.08,depth:.6},scene);gunMesh.parent=root;gunMesh.position.set(.22,0,.30);gunMesh.rotation.x=Math.PI/2.2;gunMesh.material=accentMat;gunMesh.isPickable=false;
+ // Billboard health bar above the avatar.
+ const barRoot=new B.TransformNode("remote bar "+id,scene);barRoot.parent=root;barRoot.position.set(0,1.35,0);
+ const back=B.MeshBuilder.CreatePlane("remote bar back "+id,{width:1.0,height:.12},scene);back.parent=barRoot;back.position.z=-.04;back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=material("remote bar dark "+id,"#142024");back.isPickable=false;
+ const fill=B.MeshBuilder.CreatePlane("remote bar fill "+id,{width:.92,height:.07},scene);fill.parent=barRoot;fill.position.z=-.02;fill.billboardMode=B.Mesh.BILLBOARDMODE_ALL;fill.material=material("remote bar fill mat "+id,"#70ed63",.5,"#285d20");fill.isPickable=false;
+ const p={root,body,head,gunMesh,barRoot,barFill:fill,hp:data.health||100,maxHp:100,weaponIndex:data.weaponIndex||0,kills:data.kills||0,name:data.name||"Operator"};
+ updateRemoteBar(p);
+ return p;
+}
+function updateRemoteBar(p){
+ const ratio=Math.max(0,p.hp/p.maxHp);
+ if(p.barFill){
+  p.barFill.scaling.x=ratio;
+  p.barFill.position.x=-(1-ratio)*.46;
+  p.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");
+  p.barFill.material.emissiveColor=p.barFill.material.diffuseColor.scale(.25);
+ }
+}
+function updateRemotePlayer(data){
+ if(!data||!data.id)return;
+ const hasPos=data.x!==undefined&&data.y!==undefined&&data.z!==undefined;
+ let p=remotes.get(data.id);
+ if(hasPos&&!p){p=createRemotePlayer(data);remotes.set(data.id,p);}
+ if(!p)return;
+ if(data.name)p.name=data.name;
+ if(data.weaponIndex!==undefined)p.weaponIndex=data.weaponIndex;
+ if(data.kills!==undefined)p.kills=data.kills;
+ if(hasPos)p.root.position.set(data.x,data.y,data.z);
+ if(data.rotY!==undefined)p.root.rotation.y=data.rotY;
+ if(p.head&&data.rotX!==undefined)p.head.rotation.x=Math.max(-1,Math.min(1,data.rotX));
+ if(data.health!==undefined){p.hp=data.health;updateRemoteBar(p);}
+}
+function removeRemotePlayer(id){
+ const p=remotes.get(id);
+ if(!p)return;
+ remotes.delete(id);
+ try{p.root.dispose(true,true);}catch(e){}
+}
 function showToast(s){const el=$("toast");el.textContent=s;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1300);}
 function syncHUD(){$("health").textContent=health;$("hpbar").style.width=health+"%";$("ammo").textContent=ammo;$("objective").textContent="Eliminate training drones · "+kills+" / 5";const w=weapons[weaponIndex];$("weapon-name").textContent=w.name;$("ammo").textContent=ammo;$("weapon-slots").textContent="1 AR · 2 SMG · 3 SG · 4 SR · 5 LMG";const ammoMax=document.querySelector(".hud em");if(ammoMax)ammoMax.textContent=" / "+w.mag;}
-function resetGame(){aimHeld=false;aimZoom=1;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;kills=0;ammo=weapons[weaponIndex].mag;reloading=false;reloadTimer=0;fireCooldown=0;recoilKick=0;gunKick=0;spreadKick=0;slideTimer=0;crouched=false;camera.position.set(50,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
+function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;kills=0;ammo=weapons[weaponIndex].mag;reloading=false;reloadTimer=0;fireCooldown=0;recoilKick=0;gunKick=0;spreadKick=0;slideTimer=0;crouched=false;camera.position.set(50,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
 function equipWeapon(i){if(i<0||i>=weapons.length||i===weaponIndex)return;weaponIndex=i;const w=weapons[i];ammo=w.mag;reloading=false;reloadTimer=0;fireCooldown=0;gun.material.diffuseColor=B.Color3.FromHexString("#18252c");barrelMesh.material.diffuseColor=B.Color3.FromHexString(w.color);barrelMesh.material.emissiveColor=B.Color3.FromHexString(w.color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(w.color);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(w.color);syncHUD();showToast("EQUIPPED: "+w.name);}
 function startGame(){started=true;paused=false;$("intro").classList.add("hide");$("pausemenu").classList.add("hide");canvas.focus();if(canvas.requestPointerLock)canvas.requestPointerLock();}
@@ -248,6 +324,7 @@ function update(dt){
   }
  }
  targets.forEach(t=>{if(t.alive){t.root.position.y=t.baseY+Math.sin(performance.now()*.002+t.phase)*.12;t.root.rotation.y+=dt*.5;if(Math.random()<dt*.012){health=Math.max(0,health-1);syncHUD();if(health===0)endGame(false);}}});
+ sendPlayerState();
 }
 function loop(){const now=performance.now();const dt=Math.min(.04,(now-lastTime)/1000||.016);lastTime=now;if(scene){update(dt);scene.render();} }
 try{createArena();resetGame();engine.runRenderLoop(loop);window.addEventListener("resize",()=>engine.resize());}catch(e){console.error(e);$("engine-error").classList.remove("hide");}
