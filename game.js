@@ -41,16 +41,30 @@ function block(name,x,y,z,sx,sy,sz,mat){const o=B.MeshBuilder.CreateBox(name,{wi
 function flat(name,x,z,sx,sz,y,mat){const o=B.MeshBuilder.CreateGround(name,{width:sx,height:sz,subdivisions:1},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
 function createArena(){
 scene=new B.Scene(engine);scene.clearColor=new B.Color4(.48,.72,.88,1);scene.collisionsEnabled=true;scene.gravity=new B.Vector3(0,-18,0);
+scene.fogMode=B.Scene.FOGMODE_EXP2;scene.fogColor=new B.Color3(.55,.74,.9);scene.fogDensity=.0045;
 const sky=new B.HemisphericLight("ambient",new B.Vector3(0,1,0),scene);sky.intensity=.9;sky.groundColor=new B.Color3(.35,.4,.38);
 const sun=new B.DirectionalLight("sun",new B.Vector3(-.45,-1,.25),scene);sun.position.set(20,40,-20);sun.intensity=.7;
 const ground=material("plain ground","#65716a"),wall=material("end walls","#263941"),barrier=material("side barriers","#52696b"),trim=material("lime trim","#b7f34a",.6,"#273b0c"),tower=material("tower concrete","#63767b"),cover=material("simple cover","#3c5054");
-// A very large, untextured skybox surrounds the arena. It is deliberately open overhead.
-const skybox=B.MeshBuilder.CreateBox("skybox",{size:1000},scene);const skyMat=new B.StandardMaterial("skybox material",scene);skyMat.backFaceCulling=false;skyMat.disableLighting=true;skyMat.diffuseColor=new B.Color3(.48,.72,.88);skyMat.emissiveColor=new B.Color3(.48,.72,.88);skybox.material=skyMat;skybox.infiniteDistance=true;skybox.isPickable=false;
-// Large, completely flat play area.
-flat("wide flat plain",50,50,100,100,0,ground);
+// A gradient sky dome with soft haze near the horizon.
+const skyDome=B.MeshBuilder.CreateSphere("sky dome",{diameter:900,segments:32,ringCount:16},scene);
+const skyMat=new B.StandardMaterial("sky dome material",scene);skyMat.backFaceCulling=false;skyMat.disableLighting=true;skyMat.vertexColors=true;skyMat.fogEnabled=false;skyMat.diffuseColor=B.Color3.White();skyMat.emissiveColor=B.Color3.White();
+const skyPos=skyDome.getVerticesData(B.VertexBuffer.PositionKind),skyCol=[];
+for(let i=0;i<skyPos.length;i+=3){const t=Math.max(0,Math.min(1,(skyPos[i+1]+450)/900));const c=B.Color3.Lerp(new B.Color3(.8,.88,.94),new B.Color3(.22,.46,.82),t);skyCol.push(c.r,c.g,c.b,1);}
+skyDome.setVerticesData(B.VertexBuffer.ColorKind,skyCol);skyDome.material=skyMat;skyDome.infiniteDistance=true;skyDome.isPickable=false;
+// Procedural grid texture for the play area (repeats every 10 units).
+const gridTex=new B.DynamicTexture("arena grid",{width:512,height:512},scene);const gctx=gridTex.getContext();
+gctx.fillStyle="#39433e";gctx.fillRect(0,0,512,512);
+gctx.strokeStyle="#4c5952";gctx.lineWidth=8;gctx.strokeRect(0,0,512,512);
+gctx.strokeStyle="#5b6a62";gctx.lineWidth=2;for(let i=1;i<10;i++){const p=(i/10)*512;gctx.beginPath();gctx.moveTo(p,0);gctx.lineTo(p,512);gctx.stroke();gctx.beginPath();gctx.moveTo(0,p);gctx.lineTo(512,p);gctx.stroke();}
+gctx.strokeStyle="#b7f34a";gctx.lineWidth=4;gctx.strokeRect(6,6,500,500);
+gridTex.update();
+const groundMat=new B.StandardMaterial("arena ground",scene);groundMat.diffuseTexture=gridTex;groundMat.diffuseTexture.wrapU=B.Texture.WRAP_ADDRESSMODE;groundMat.diffuseTexture.wrapV=B.Texture.WRAP_ADDRESSMODE;groundMat.diffuseTexture.uScale=10;groundMat.diffuseTexture.vScale=10;groundMat.specularColor=new B.Color3(.06,.06,.06);
+const groundMesh=flat("wide flat plain",50,50,100,100,0,groundMat);groundMesh.receiveShadows=true;
 // Solid walls on the two short ends, where the sniper towers sit.
 block("north end wall",50,2,0,100,4,1.2,wall);
 block("south end wall",50,2,100,100,4,1.2,wall);
+block("north wall trim",50,4.05,0,100,.25,1.3,trim);
+block("south wall trim",50,4.05,100,100,.25,1.3,trim);
 // No solid side walls: spaced barriers line both long sides.
 for(const z of [10,22,34,46,58,70,82,94]){
   block("west side barrier",1.5,.9,z,3,1.8,2.4,barrier);
@@ -70,6 +84,17 @@ for(const z of [8,92]){
 }
 // A few low pieces of cover are scattered across the otherwise empty plain.
 [[25,25],[50,25],[75,25],[25,50],[75,50],[25,75],[50,75],[75,75]].forEach(([x,z])=>block("field cover",x,.65,z,3,1.3,2,cover));
+// Decorative cover: crates, barrels, rocks, glowing pillars and a central beacon.
+const crateMat=material("crate wood","#6f4f2e");crateMat.edgesWidth=.04;crateMat.edgesColor=new B.Color3(.22,.15,.08);
+const barrelMat=material("metal barrel","#7a5230");
+const rockMat=material("rock","#4a5250");
+[[12,12,2],[88,12,2],[12,88,2],[88,88,2],[30,18,2],[70,18,2],[30,82,2],[70,82,2],[15,52,1.6],[85,48,1.6],[42,28,1.5],[58,72,1.5]].forEach((c,i)=>block("crate "+i,c[0],c[2]/2,c[1],c[2],c[2],c[2],crateMat));
+[[20,14],[80,14],[20,86],[80,86],[44,12],[56,12],[44,88],[56,88],[16,70],[84,30]].forEach((c,i)=>{const m=B.MeshBuilder.CreateCylinder("barrel "+i,{height:1.3,diameter:.9,tessellation:14},scene);m.position.set(c[0],.65,c[1]);m.material=barrelMat;m.checkCollisions=true;});
+[[10,32,.9],[90,32,.9],[10,68,.8],[90,68,.8],[40,66,1.1],[60,34,1.0],[18,58,.7],[82,46,.8],[52,30,.6],[48,70,.6]].forEach((c,i)=>{const m=B.MeshBuilder.CreateIcoSphere("rock "+i,{radius:c[2],subdivisions:2},scene);m.position.set(c[0],c[2]*.6,c[1]);m.material=rockMat;m.checkCollisions=true;});
+for(const [x,z] of [[8,18],[92,18],[8,82],[92,82]])block("accent pillar",x,4,z,.7,8,.7,material("accent pillar mat","#243740",.7,"#b7f34a"));
+block("beacon base",50,.25,50,8,.5,8,tower);
+const beaconCore=B.MeshBuilder.CreateSphere("beacon core",{diameter:1.6,segments:14},scene);beaconCore.position.set(50,2.1,50);beaconCore.material=material("beacon glow","#b7f34a",.4,"#9ee63f");beaconCore.isPickable=false;
+const beaconLight=new B.PointLight("beacon light",new B.Vector3(50,3,50),scene);beaconLight.intensity=10;beaconLight.diffuse=new B.Color3(.7,1,.45);beaconLight.range=20;
 camera=new B.UniversalCamera("player camera",new B.Vector3(50,1.7,15),scene);camera.attachControl(canvas,true);camera.inertia=0;camera.angularSensibility=2400;camera.speed=0;camera.minZ=.08;camera.fov=baseFov=Math.PI/2.8;camera.checkCollisions=true;camera.applyGravity=false;camera.ellipsoid=new B.Vector3(.35,.85,.35);camera.ellipsoidOffset=new B.Vector3(0,.8,0);camera.keysUp=[87,38];camera.keysDown=[83,40];camera.keysLeft=[65];camera.keysRight=[68];camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 camera.rotation.set(0,0,0);
 // Stylized medium-detail AR, built from real Babylon.js meshes (no external asset loader).
@@ -110,6 +135,21 @@ for(let i=0;i<5;i++)gunBox("AR handguard rib "+i,.025,.035,.045,.455,-.27,.19+i*
 gunBox("AR foregrip",.11,.14,.105,.34,-.405,.31,gunDark);
 muzzleFlash=B.MeshBuilder.CreateSphere("muzzle flash",{diameter:.18,segments:6},scene);muzzleFlash.parent=gunRoot;muzzleFlash.position.set(.34,-.25,-.15);muzzleFlash.material=new B.StandardMaterial("muzzle flash material",scene);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(weapons[0].color);muzzleFlash.isVisible=false;
 createTargets();
+// Soft shadows give the arena depth and make every object feel solid.
+const shadowGen=new B.ShadowGenerator(1024,sun);
+shadowGen.useBlurExponentialShadowMap=true;shadowGen.blurKernel=8;shadowGen.darkness=.4;
+scene.meshes.forEach(m=>{
+ if(m.name==="sky dome"||m.name==="player camera"||m.name.startsWith("health bar"))return;
+ let par=m.parent;while(par){if(par===camera)return;par=par.parent;}
+ m.receiveShadows=true;
+ if(m.name!=="beacon core"&&m.name!=="wide flat plain")shadowGen.addShadowCaster(m);
+});
+// Mild post-processing for punch (bloom + vignette). Fails silently if unavailable.
+try{
+ const pp=new B.DefaultRenderingPipeline("default",true,engine,[camera]);
+ pp.bloomEnabled=true;pp.bloomWeight=.22;pp.bloomThreshold=.75;pp.bloomKernel=64;pp.bloomScale=.5;
+ pp.vignetteEnabled=true;pp.vignetteWeight=1.1;pp.vignetteColor=new B.Color4(0,0,0,.35);
+}catch(e){console.warn("Post-processing unavailable:",e);}
  // Color the weapon accent to match the saved core.
  const activeWeapon=weapons[weaponIndex];barrelMesh.material.diffuseColor=B.Color3.FromHexString(activeWeapon.color);barrelMesh.material.emissiveColor=B.Color3.FromHexString(activeWeapon.color);muzzleFlash.material.diffuseColor=B.Color3.FromHexString(activeWeapon.color);muzzleFlash.material.emissiveColor=B.Color3.FromHexString(activeWeapon.color);
  return scene;
