@@ -6,6 +6,7 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const views = {
   lobby: $("#view-lobby"),
   loadout: $("#view-loadout"),
+  shop: $("#view-shop"),
   progression: $("#view-progression"),
   settings: $("#view-settings")
 };
@@ -66,7 +67,7 @@ if (hostButton) hostButton.addEventListener("click", () => {
 });
 const joinButton = $("#join-button");
 if (joinButton) joinButton.addEventListener("click", () => {
-  openModal("Join a LAN match", '<p>Enter the host computer\'s local network address. Both computers must be on the same local network.</p><p><strong>Not connected yet:</strong> LAN joining is not implemented in this prototype.</p><label class="field-label" for="host-address">Host address</label><input class="field" id="host-address" placeholder="Example: 192.168.1.20" inputmode="decimal" autocomplete="off"><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close>Cancel</button><button class="btn btn-primary" type="button" id="join-confirm">Continue</button></div>');
+  openModal("Join a LAN match", "<p>Enter the host computer's local network address. Both computers must be on the same local network.</p><p><strong>Not connected yet:</strong> LAN joining is not implemented in this prototype.</p><label class=\"field-label\" for=\"host-address\">Host address</label><input class=\"field\" id=\"host-address\" placeholder=\"Example: 192.168.1.20\" inputmode=\"decimal\" autocomplete=\"off\"><div class=\"modal-actions\"><button class=\"btn btn-secondary\" type=\"button\" data-close>Cancel</button><button class=\"btn btn-primary\" type=\"button\" id=\"join-confirm\">Continue</button></div>");
   $("#join-confirm").addEventListener("click", () => {
     const address = $("#host-address").value.trim();
     closeModal();
@@ -85,120 +86,194 @@ if (settingsButton) settingsButton.addEventListener("click", () => {
   showToast("UI scale applied for this page session.");
 });
 
-const weaponCores = {
-  vanguard: {name:"M4A1 CARBINE", className:"ASSAULT RIFLE", base:{damage:31,rate:750,recoil:1.15,reload:2.2,range:75}},
-  viper: {name:"MP5", className:"SUBMACHINE GUN", base:{damage:20,rate:800,recoil:1.45,reload:2.0,range:38}},
-  breacher: {name:"REMINGTON 870", className:"PUMP-ACTION SHOTGUN", base:{damage:12,rate:75,recoil:3.1,reload:0.55,range:20}},
-  scope: {name:"ARCTIC WARFARE", className:"SNIPER RIFLE", base:{damage:100,rate:40,recoil:3.4,reload:2.8,range:150}},
-  bastion: {name:"M249 SAW", className:"LIGHT MACHINE GUN", base:{damage:24,rate:750,recoil:2.35,reload:4.5,range:85}}
-};
-const parts = {
-  barrel: {
-    "m4a1-barrel":{damage:0,recoil:0,range:0},
-    "mp5-barrel":{damage:-8,recoil:-8,range:-18},
-    "870-barrel":{damage:5,recoil:10,range:-25},
-    "aw-barrel":{damage:12,recoil:8,range:20},
-    "m249-barrel":{damage:4,recoil:12,range:8}
-  },
-  stock: {
-    "m4a1-stock":{recoil:-5,reload:0},
-    "mp5-stock":{recoil:8,reload:-5},
-    "870-stock":{recoil:-5,reload:0},
-    "aw-stock":{recoil:-18,reload:8},
-    "m249-stock":{recoil:-12,reload:12}
-  },
-  magazine: {
-    "m4a1-mag":{capacity:30,damage:0,reload:0},
-    "mp5-mag":{capacity:30,damage:0,reload:-5},
-    "870-mag":{capacity:7,damage:0,reload:0},
-    "aw-mag":{capacity:5,damage:0,reload:0},
-    "m249-mag":{capacity:100,damage:-4,reload:18}
-  },
-  scope: {
-    "iron-sights":{zoom:1.5},
-    "aw-sight":{zoom:6}
-  }
-};
-const defaults = {core:"vanguard",barrel:"m4a1-barrel",stock:"m4a1-stock",magazine:"m4a1-mag",scope:"iron-sights"};
-let draft = {...defaults};
-let saved = {...defaults};
+// ---- Currency / Shop ----
+const catalog = window.CustomFPSWeapons;
+const { weapons: weaponCatalog, classes: weaponClasses, primaries, secondaries, getWeapon, defaultLoadout, normalizeLoadout } = catalog;
+const weaponById = Object.fromEntries(weaponCatalog.map(w => [w.id, w]));
 
-function statsFor(loadout) {
-  const result = {...weaponCores[loadout.core].base};
-  const barrel = parts.barrel[loadout.barrel] || {};
-  const stock = parts.stock[loadout.stock] || {};
-  const mag = parts.magazine[loadout.magazine] || {};
-  const apply = (key, percent) => { result[key] = Math.round(result[key] * (1 + percent / 100) * 100) / 100; };
-  apply("damage", barrel.damage || 0); apply("recoil", barrel.recoil || 0); apply("range", barrel.range || 0);
-  apply("recoil", stock.recoil || 0); apply("reload", stock.reload || 0);
-  apply("damage", mag.damage || 0); apply("reload", mag.reload || 0);
-  result.capacity = mag.capacity || 30;
-  result.zoom = parts.scope[loadout.scope]?.zoom || 1;
-  return result;
+const CREDITS_KEY = "customfps-credits";
+const LOADOUT_KEY = "customfps-loadout";
+
+let credits = 999999; // Infinite money for testing
+try {
+  const saved = JSON.parse(localStorage.getItem(CREDITS_KEY) || "null");
+  if (saved && typeof saved === "number") credits = saved;
+} catch (e) {}
+function saveCredits() {
+  try { localStorage.setItem(CREDITS_KEY, JSON.stringify(credits)); } catch (e) {}
 }
-function syncBuilder() {
-  $$("[data-core]").forEach(button => {
-    const selected = button.dataset.core === draft.core;
-    button.classList.toggle("is-selected", selected);
-    button.setAttribute("aria-pressed", String(selected));
-    const check = button.querySelector(".core-check");
-    if (check) check.textContent = selected ? "SELECTED" : "SELECT";
-  });
-  ["barrel","stock","magazine","scope"].forEach(slot => {
-    const select = $("#part-" + slot);
-    if (select) { if (!parts[slot][draft[slot]]) draft[slot] = defaults[slot]; select.value = draft[slot]; }
-  });
-  const core = weaponCores[draft.core];
-  const stats = statsFor(draft);
-  if ($("#preview-weapon-name")) $("#preview-weapon-name").textContent = core.name;
-  if ($("#preview-weapon-class")) $("#preview-weapon-class").textContent = core.className;
-  if ($("#preview-mag-capacity")) $("#preview-mag-capacity").textContent = stats.capacity + (draft.core === "breacher" ? " SHELL TUBE" : " ROUND MAG");
-  if ($("#total-stat-grid")) {
-    const items = [
-      ["DAMAGE", stats.damage, draft.core === "breacher" ? "per pellet" : "per shot"],
-      ["FIRE RATE", stats.rate + " RPM", "base rate"],
-      ["RECOIL", stats.recoil, "lower is steadier"],
-      ["RELOAD TIME", stats.reload + (draft.core === "breacher" ? " sec / shell" : " sec"), "lower is faster"],
-      ["RANGE", stats.range + " units", "effective range"]
-    ];
-    $("#total-stat-grid").innerHTML = items.map(item => '<div class="total-stat"><span>'+item[0]+'</span><strong>'+item[1]+'</strong><small>'+item[2]+'</small></div>').join("");
-  }
-  const changed = JSON.stringify(draft) !== JSON.stringify(saved);
-  if ($("#saved-status")) $("#saved-status").classList.toggle("has-unsaved", changed);
-  if ($("#saved-loadout-name")) $("#saved-loadout-name").textContent = weaponCores[saved.core].name;
-  if ($("#save-help")) $("#save-help").textContent = changed ? "Your saved gun is unchanged. Save to use this new configuration in your next match." : "Your current draft matches your saved loadout.";
-  if ($("#saved-confirmation")) $("#saved-confirmation").hidden = true;
+function renderCredits() {
+  $$("[data-credits]").forEach(el => { el.textContent = credits.toLocaleString(); });
 }
-$$("[data-core]").forEach(button => button.addEventListener("click", () => {
-  if (!weaponCores[button.dataset.core]) return;
-  draft.core = button.dataset.core;
-  syncBuilder();
-}));
-["barrel","stock","magazine","scope"].forEach(slot => {
-  const select = $("#part-" + slot);
-  if (select) select.addEventListener("change", () => { draft[slot] = select.value; syncBuilder(); });
-});
-const saveButton = $("#save-loadout");
-if (saveButton) saveButton.addEventListener("click", () => {
-  saved = {...draft};
+
+// ---- Loadout: Primary + Secondary ----
+function readSavedLoadout() {
   try {
-    localStorage.setItem("customfps-loadout", JSON.stringify({
-      loadout: {...saved},
-      stats: statsFor(saved),
-      core: weaponCores[saved.core]
-    }));
+    const value = JSON.parse(localStorage.getItem(LOADOUT_KEY) || "null");
+    if (value && value.loadout) return normalizeLoadout(value.loadout);
   } catch (error) {
-    console.warn("Could not persist loadout in this browser.", error);
+    console.warn("Could not read saved loadout; using defaults.", error);
   }
-  syncBuilder();
-  if ($("#saved-confirmation")) {
-    $("#saved-confirmation").hidden = false;
-    $("#saved-confirmation").innerHTML = "<span>✓</span> LOADOUT SAVED — " + weaponCores[saved.core].name + " IS SET FOR YOUR NEXT MATCH.";
-  }
-  showView("lobby");
-  showToast("LOADOUT SAVED SUCCESSFULLY — " + weaponCores[saved.core].name + " is ready for your next match.");
-});
+  return defaultLoadout();
+}
+let loadout = readSavedLoadout();
+let ownedSecondaries = new Set(["classic"]); // Classic is free and always owned
+try {
+  const saved = JSON.parse(localStorage.getItem("customfps-owned") || "[]");
+  if (Array.isArray(saved)) ownedSecondaries = new Set(saved);
+} catch (e) {}
+function saveLoadout() {
+  try {
+    localStorage.setItem(LOADOUT_KEY, JSON.stringify({ loadout, credits, owned: Array.from(ownedSecondaries) }));
+  } catch (e) {}
+}
+function saveOwned() {
+  try {
+    localStorage.setItem("customfps-owned", JSON.stringify(Array.from(ownedSecondaries)));
+  } catch (e) {}
+}
 
-syncBuilder();
-showView("lobby");
+function renderCoreCatalog() {
+  const container = $("#weapon-cores");
+  const filterEl = $("#weapon-class-filter");
+  if (!container || !filterEl) return;
+  let classFilter = "all";
+
+  const weaponList = classFilter === "all" ? weaponCatalog : weaponCatalog.filter(w => w.classId === classFilter);
+
+  filterEl.innerHTML = [{id: "all", shortName: "ALL", name: "All weapon classes"}, ...weaponClasses].map(group =>
+    '<button type="button" class="class-filter' + (group.id === classFilter ? " is-active" : "") + '" data-class-filter="' + group.id + '" aria-pressed="' + (group.id === classFilter) + '" title="' + group.name + '">' + group.shortName + '</button>'
+  ).join("");
+
+  // In the loadout view, only show owned weapons. All primaries are free/owned;
+  // sidearms must be purchased in the shop first.
+  const ownedWeaponIds = new Set(weaponCatalog.filter(w => w.classId !== "sidearm" || ownedSecondaries.has(w.id)).map(w => w.id));
+
+  container.innerHTML = weaponClasses.map(group => {
+    const cores = catalog.coresInClass(group.id)
+      .filter(w => (classFilter === "all" || w.classId === classFilter) && ownedWeaponIds.has(w.id));
+    if (cores.length === 0) return "";
+    const isSidearm = group.id === "sidearm";
+    return '<section class="weapon-class-group" data-class-group="' + group.id + '"' + (classFilter !== "all" && classFilter !== group.id ? " hidden" : "") + ' aria-labelledby="class-title-' + group.id + '">' +
+      '<div class="weapon-class-heading"><h4 id="class-title-' + group.id + '"><span>' + group.key + '</span>' + group.name + '</h4><small>' + cores.length + ' ' + (isSidearm ? "SIDEARMS" : "CORES") + '</small></div>' +
+      '<div class="core-selection builder-core-selection" role="group" aria-label="Choose a ' + group.name.toLowerCase() + '">' + cores.map((core, index) => {
+      const isEquipped = loadout.core === core.id || loadout.secondary === core.id;
+      const slot = loadout.core === core.id ? "PRIMARY" : loadout.secondary === core.id ? "SECONDARY" : "";
+      const priceText = core.cost === 0 ? "FREE" : "OWNED";
+      return '<button class="core-card' + (isEquipped ? " is-equipped" : "") + '" type="button" data-core="' + core.id + '" aria-pressed="false">' +
+        '<span class="core-card-top"><span class="core-index">' + group.shortName + ' 0' + (index + 1) + '</span><span class="core-badges"><span class="price-tag">' + priceText + '</span>' + (isEquipped ? '<span class="core-check">EQUIPPED ' + slot + '</span>' : '<span class="core-check">SELECT</span>') + '</span></span>' +
+        '<span class="core-silhouette ' + group.silhouette + '" aria-hidden="true"></span>' +
+        '<strong>' + core.name + '</strong><span class="core-role">' + core.role + '</span>' +
+        '<span class="core-base-stats"><span><small>DMG</small><b>' + core.base.damage + '</b></span><span><small>RPM</small><b>' + core.base.rate + '</b></span><span><small>MAG</small><b>' + core.base.capacity + '</b></span></span>' +
+        '</button>';
+    }).join("") + '</div></section>';
+  }).join("");
+
+  filterEl.querySelectorAll("[data-class-filter]").forEach(button => {
+    button.addEventListener("click", () => {
+      classFilter = button.dataset.classFilter;
+      renderCoreCatalog();
+      filterEl.querySelector('[data-class-filter="' + classFilter + '"]')?.focus({preventScroll: true});
+    });
+  });
+
+  container.querySelectorAll("[data-core]").forEach(button => {
+    button.addEventListener("click", () => {
+      const coreId = button.dataset.core;
+      const core = getWeapon(coreId);
+      if (!core) return;
+      if (core.classId === "sidearm") {
+        loadout.secondary = coreId;
+      } else {
+        loadout.core = coreId;
+      }
+      saveLoadout();
+      renderCoreCatalog();
+      renderLoadoutPanel();
+      showToast(core.name + " " + (core.classId === "sidearm" ? "secondary" : "primary") + " equipped.");
+    });
+  });
+}
+
+function renderLoadoutPanel() {
+  const primary = getWeapon(loadout.core);
+  const secondary = getWeapon(loadout.secondary);
+  const pEl = $("#equipped-primary");
+  const sEl = $("#equipped-secondary");
+  if (pEl) pEl.textContent = primary ? primary.name : "NONE";
+  if (sEl) sEl.textContent = secondary ? secondary.name : "NONE";
+  const primaryStats = $("#primary-stats");
+  const secondaryStats = $("#secondary-stats");
+  if (primary && primaryStats) {
+    primaryStats.innerHTML = '<div class="stat-row"><span>DMG</span><strong>' + primary.base.damage + '</strong></div><div class="stat-row"><span>RPM</span><strong>' + primary.base.rate + '</strong></div><div class="stat-row"><span>MAG</span><strong>' + primary.base.capacity + '</strong></div><div class="stat-row"><span>RANGE</span><strong>' + primary.base.range + 'm</strong></div>';
+  }
+  if (secondary && secondaryStats) {
+    secondaryStats.innerHTML = '<div class="stat-row"><span>DMG</span><strong>' + secondary.base.damage + '</strong></div><div class="stat-row"><span>RPM</span><strong>' + secondary.base.rate + '</strong></div><div class="stat-row"><span>MAG</span><strong>' + secondary.base.capacity + '</strong></div><div class="stat-row"><span>RANGE</span><strong>' + secondary.base.range + 'm</strong></div>';
+  }
+}
+
+function renderShop() {
+  const container = $("#shop-list");
+  if (!container) return;
+  const purchasable = secondaries().filter(w => !ownedSecondaries.has(w.id));
+  container.innerHTML = purchasable.map(w => {
+    const b = w.base;
+    const canAfford = credits >= w.cost;
+    const headshot = b.headshot || b.damage;
+    const legs = b.legs || b.damage;
+    return '<div class="shop-item' + (canAfford ? "" : " locked") + '">' +
+      '<div class="shop-info">' +
+      '<strong>' + w.name + '</strong>' +
+      '<span class="shop-role">' + w.role + '</span>' +
+      '<p class="shop-desc">' + w.description + '</p>' +
+      '<div class="shop-stats">' +
+      '<div class="stat-row"><span>DMG</span><strong>' + b.damage + '</strong></div>' +
+      '<div class="stat-row"><span>HEAD</span><strong>' + headshot + '</strong></div>' +
+      '<div class="stat-row"><span>LEGS</span><strong>' + legs + '</strong></div>' +
+      '<div class="stat-row"><span>RPM</span><strong>' + b.rate + '</strong></div>' +
+      '<div class="stat-row"><span>MAG</span><strong>' + b.capacity + '</strong></div>' +
+      '<div class="stat-row"><span>RANGE</span><strong>' + b.range + 'm</strong></div>' +
+      '</div>' +
+      '<div class="shop-ability"><strong>Ability:</strong> ' + w.role + '</div>' +
+      '</div>' +
+      '<div class="shop-buy">' +
+      '<span class="price">' + w.cost + ' CR</span>' +
+      '<button class="btn' + (canAfford ? " btn-primary" : " btn-secondary disabled") + '" data-buy="' + w.id + '"' + (!canAfford ? " disabled" : "") + '>' + (canAfford ? "BUY" : "UNAFFORDABLE") + '</button>' +
+      '</div></div>';
+  }).join("");
+  container.querySelectorAll("[data-buy]").forEach(button => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.buy;
+      const w = getWeapon(id);
+      if (!w || ownedSecondaries.has(id)) return;
+      if (credits < w.cost) { showToast("Not enough credits."); return; }
+      credits -= w.cost;
+      saveCredits();
+      renderCredits();
+      const creditsEl = $("#shop-credits");
+      if (creditsEl) creditsEl.textContent = credits.toLocaleString();
+      ownedSecondaries.add(id);
+      saveOwned();
+      renderShop();
+      renderCoreCatalog();
+      showToast("PURCHASED " + w.name + " — " + w.cost + " credits.");
+    });
+  });
+}
+
+renderCredits();
+renderCoreCatalog();
+renderLoadoutPanel();
+renderShop();
+
+const saveButton = $("#save-loadout");
+if (saveButton) {
+  saveButton.textContent = "SAVE LOADOUT";
+  saveButton.addEventListener("click", () => {
+    saveLoadout();
+    showView("lobby");
+    showToast("LOADOUT SAVED — PRIMARY: " + getWeapon(loadout.core).name + " · SECONDARY: " + getWeapon(loadout.secondary).name);
+  });
+}
+
 })();
