@@ -390,8 +390,8 @@ function shoot(){
   const mesh=pick.pickedMesh;
   target=targets.find(t=>t.alive&&(mesh===t.body||mesh===t.head||mesh===t.legs||mesh.parent===t.root));
   if(target){
-   if(mesh===t.head)hitLocation="head";
-   else if(mesh===t.legs)hitLocation="legs";
+   if(mesh===target.head)hitLocation="head";
+   else if(mesh===target.legs)hitLocation="legs";
    else hitLocation="body";
   }
  }
