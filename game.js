@@ -396,7 +396,7 @@ function shoot(){
   }
  }
  if(target){
-  const distance=camera.position.distanceTo(target.root.position);
+  const dx=camera.position.x-target.root.position.x;const dy=camera.position.y-target.root.position.y;const dz=camera.position.z-target.root.position.z;const distance=Math.sqrt(dx*dx+dy*dy+dz*dz);
   const damage=calcDamage(w,hitLocation,distance);
   target.hp=Math.max(0,target.hp-damage);updateTargetBar(target);showDamagePopup(Math.round(damage));
   if(target.hp<=0){
