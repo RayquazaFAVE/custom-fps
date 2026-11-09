@@ -7,10 +7,30 @@ let engine;
 try{
  engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:false,powerPreference:"low-power"});
  engine.setHardwareScalingLevel(Math.max(1,window.devicePixelRatio>1?1.35:1));
+ canvas.width=canvas.clientWidth||800;
+ canvas.height=canvas.clientHeight||600;
+ canvas.style.backgroundColor="#111820";
 }catch(e){
  $("engine-error").classList.remove("hide");
  $("engine-error").textContent="3D engine failed to start: "+e.message;
  return;
+}
+// Global error handler: show JS errors on screen instead of hidden console
+window.addEventListener("error",e=>{
+ const msg=e.message||e.error&&e.error.message||String(e);
+ $("engine-error").classList.remove("hide");
+ $("engine-error").textContent="Game error: "+msg;
+ console.error(e);
+});
+window.addEventListener("unhandledrejection",e=>{
+ $("engine-error").classList.remove("hide");
+ $("engine-error").textContent="Game error: "+(e.reason&&e.reason.message?e.reason.message:String(e.reason));
+});
+// Keep canvas sized to the preview iframe container
+if(window.ResizeObserver){
+ new ResizeObserver(()=>{
+  if(canvas){canvas.width=canvas.clientWidth||800;canvas.height=canvas.clientHeight||600;if(engine)engine.resize();}
+ }).observe(canvas.parentElement||document.body);
 }
 let scene,camera,gunRoot=null,baseFov=Math.PI/2.8,started=false,paused=false,mouseHeld=false,eHeld=false,aimHeld=false,aimZoom=1,health=100,shield=50,maxShield=50,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,recoilKick=0,gunKick=0,spreadKick=0,crouched=false,burstRemaining=0,burstTimer=0,activeWeaponIndex=0,credits=999999;
 const MOVE_SPEED=6.75, WALK_SPEED=8, ARENA=100;
@@ -284,7 +304,16 @@ function syncHUD(){
 }
 function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;shield=maxShield;kills=0;activeWeaponIndex=0;currentWeapon=activeWeapon;ammo=currentWeapon.mag;reloading=false;reloadTimer=0;fireCooldown=0;burstRemaining=0;burstTimer=0;recoilKick=0;gunKick=0;spreadKick=0;crouched=false;camera.position.set(50,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
-function startGame(){started=true;paused=false;$("intro").classList.add("hide");$("pausemenu").classList.add("hide");canvas.focus();if(canvas.requestPointerLock){canvas.requestPointerLock().catch(()=>{});}else{showToast("Pointer lock unavailable — click canvas to look around");}}
+function startGame(){
+ if(!scene){
+  $("engine-error").classList.remove("hide");
+  $("engine-error").textContent="Game scene not ready — refresh the page and try again.";
+  return;
+ }
+ started=true;paused=false;$("intro").classList.add("hide");$("pausemenu").classList.add("hide");canvas.focus();
+ if(canvas.requestPointerLock){canvas.requestPointerLock().catch(()=>{});}
+ showToast("Pointer lock unavailable — click and drag to look around");
+}
 function togglePause(){if(!started)return;paused=!paused;$("pausemenu").classList.toggle("hide",!paused);if(paused&&document.pointerLockElement)document.exitPointerLock();else if(!paused&&canvas.requestPointerLock)canvas.requestPointerLock();}
 function endGame(win){paused=true;$("endtitle").textContent=win?"TEST COMPLETE":"OPERATOR DOWN";$("endcopy").textContent=win?"All five training drones eliminated. Arena clear.":"You were tagged out during testing. Reset and try again.";$("endmenu").classList.remove("hide");if(document.pointerLockElement)document.exitPointerLock();}
 function leave(){if(document.pointerLockElement)document.exitPointerLock();location.href="index.html";}
