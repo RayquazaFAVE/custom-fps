@@ -86,51 +86,28 @@ if (settingsButton) settingsButton.addEventListener("click", () => {
   showToast("UI scale applied for this page session.");
 });
 
-// ---- Currency / Shop ----
+// ---- Currency / Shop (session-only, no persistence) ----
 const catalog = window.CustomFPSWeapons;
 const { weapons: weaponCatalog, classes: weaponClasses, primaries, secondaries, getWeapon, defaultLoadout, normalizeLoadout } = catalog;
 const weaponById = Object.fromEntries(weaponCatalog.map(w => [w.id, w]));
 
-const CREDITS_KEY = "customfps-credits";
-const LOADOUT_KEY = "customfps-loadout";
-
-let credits = 999999; // Infinite money for testing
-try {
-  const saved = JSON.parse(localStorage.getItem(CREDITS_KEY) || "null");
-  if (saved && typeof saved === "number") credits = saved;
-} catch (e) {}
-function saveCredits() {
-  try { localStorage.setItem(CREDITS_KEY, JSON.stringify(credits)); } catch (e) {}
-}
+let credits = 999999; // Infinite money for testing, resets each session
 function renderCredits() {
   $$("[data-credits]").forEach(el => { el.textContent = credits.toLocaleString(); });
 }
 
-// ---- Loadout: Primary + Secondary ----
-function readSavedLoadout() {
-  try {
-    const value = JSON.parse(localStorage.getItem(LOADOUT_KEY) || "null");
-    if (value && value.loadout) return normalizeLoadout(value.loadout);
-  } catch (error) {
-    console.warn("Could not read saved loadout; using defaults.", error);
-  }
-  return defaultLoadout();
-}
-let loadout = readSavedLoadout();
+// ---- Loadout: Primary + Secondary (session-only, no persistence) ----
+let loadout = defaultLoadout(); // Vandal primary + Classic secondary
 let ownedSecondaries = new Set(["classic"]); // Classic is free and always owned
-try {
-  const saved = JSON.parse(localStorage.getItem("customfps-owned") || "[]");
-  if (Array.isArray(saved)) ownedSecondaries = new Set(saved);
-} catch (e) {}
+
 function saveLoadout() {
-  try {
-    localStorage.setItem(LOADOUT_KEY, JSON.stringify({ loadout, credits, owned: Array.from(ownedSecondaries) }));
-  } catch (e) {}
+  // Session-only: nothing is persisted to localStorage
 }
 function saveOwned() {
-  try {
-    localStorage.setItem("customfps-owned", JSON.stringify(Array.from(ownedSecondaries)));
-  } catch (e) {}
+  // Session-only: nothing is persisted to localStorage
+}
+function saveCredits() {
+  // Session-only: nothing is persisted to localStorage
 }
 
 function renderCoreCatalog() {

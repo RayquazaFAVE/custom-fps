@@ -10,9 +10,8 @@ const MOVE_SPEED=6.75, WALK_SPEED=8, ARENA=100;
 const catalog=window.CustomFPSWeapons;
 
 function readMatchLoadout(){
- let value=null;
- try{value=JSON.parse(localStorage.getItem("customfps-loadout")||"null");}catch(e){}
- return catalog.normalizeLoadout(value);
+ // Session-only: no localStorage. Always deploy with the default loadout.
+ return catalog.defaultLoadout();
 }
 const matchLoadout=Object.freeze(readMatchLoadout());
 const matchPrimary=catalog.getWeapon(matchLoadout.core);
