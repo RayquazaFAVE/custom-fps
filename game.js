@@ -3,8 +3,15 @@ const $=id=>document.getElementById(id);
 const canvas=$("game");
 if(!window.BABYLON){$("engine-error").classList.remove("hide");return;}
 const B=window.BABYLON;
-const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:false,powerPreference:"low-power"});
-engine.setHardwareScalingLevel(Math.max(1,window.devicePixelRatio>1?1.35:1));
+let engine;
+try{
+ engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:false,powerPreference:"low-power"});
+ engine.setHardwareScalingLevel(Math.max(1,window.devicePixelRatio>1?1.35:1));
+}catch(e){
+ $("engine-error").classList.remove("hide");
+ $("engine-error").textContent="3D engine failed to start: "+e.message;
+ return;
+}
 let scene,camera,gunRoot=null,baseFov=Math.PI/2.8,started=false,paused=false,mouseHeld=false,eHeld=false,aimHeld=false,aimZoom=1,health=100,shield=50,maxShield=50,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,recoilKick=0,gunKick=0,spreadKick=0,crouched=false,burstRemaining=0,burstTimer=0,activeWeaponIndex=0,credits=999999;
 const MOVE_SPEED=6.75, WALK_SPEED=8, ARENA=100;
 const catalog=window.CustomFPSWeapons;
@@ -277,7 +284,7 @@ function syncHUD(){
 }
 function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;shield=maxShield;kills=0;activeWeaponIndex=0;currentWeapon=activeWeapon;ammo=currentWeapon.mag;reloading=false;reloadTimer=0;fireCooldown=0;burstRemaining=0;burstTimer=0;recoilKick=0;gunKick=0;spreadKick=0;crouched=false;camera.position.set(50,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
-function startGame(){started=true;paused=false;$("intro").classList.add("hide");$("pausemenu").classList.add("hide");canvas.focus();if(canvas.requestPointerLock)canvas.requestPointerLock();}
+function startGame(){started=true;paused=false;$("intro").classList.add("hide");$("pausemenu").classList.add("hide");canvas.focus();if(canvas.requestPointerLock){canvas.requestPointerLock().catch(()=>{});}else{showToast("Pointer lock unavailable — click canvas to look around");}}
 function togglePause(){if(!started)return;paused=!paused;$("pausemenu").classList.toggle("hide",!paused);if(paused&&document.pointerLockElement)document.exitPointerLock();else if(!paused&&canvas.requestPointerLock)canvas.requestPointerLock();}
 function endGame(win){paused=true;$("endtitle").textContent=win?"TEST COMPLETE":"OPERATOR DOWN";$("endcopy").textContent=win?"All five training drones eliminated. Arena clear.":"You were tagged out during testing. Reset and try again.";$("endmenu").classList.remove("hide");if(document.pointerLockElement)document.exitPointerLock();}
 function leave(){if(document.pointerLockElement)document.exitPointerLock();location.href="index.html";}
@@ -440,7 +447,12 @@ function update(dt){
  sendPlayerState();
 }
 function loop(){const now=performance.now();const dt=Math.min(.04,(now-lastTime)/1000||.016);lastTime=now;if(scene){update(dt);scene.render();} }
-try{createArena();resetGame();engine.runRenderLoop(loop);window.addEventListener("resize",()=>engine.resize());}catch(e){console.error(e);$("engine-error").classList.remove("hide");}
+try{
+ createArena();resetGame();engine.runRenderLoop(loop);window.addEventListener("resize",()=>engine.resize());
+}catch(e){
+ $("engine-error").classList.remove("hide");
+ $("engine-error").textContent="Game failed to start: "+e.message;
+}
 canvas.addEventListener("click",()=>{if(!started)startGame();else if(!paused&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.();});
 canvas.addEventListener("pointerdown",e=>{if(e.button!==0||!started||paused)return;mouseHeld=true;if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.();if(getCurrentWeapon().adsFireMode&&aimHeld)burstRemaining=getCurrentWeapon().adsBurst;shoot();});
 document.addEventListener("pointerup",e=>{if(e.button===0)mouseHeld=false;});
@@ -453,7 +465,18 @@ document.addEventListener("mouseup",e=>{if(e.button===2)aimHeld=false;});
 window.addEventListener("keydown",e=>{if(e.code!=="KeyE"||!started||paused)return;eHeld=true;e.preventDefault();if(!e.repeat){if(getCurrentWeapon().adsFireMode&&aimHeld)burstRemaining=getCurrentWeapon().adsBurst;shoot();}},true);
 window.addEventListener("keyup",e=>{if(e.code==="KeyE"){eHeld=false;keys.KeyE=false;}},true);
 document.addEventListener("pointerlockchange",()=>{if(document.pointerLockElement!==canvas)mouseHeld=false;});
-document.addEventListener("mousemove",e=>{if(document.pointerLockElement===canvas&&started&&!paused){camera.rotation.y+=e.movementX*.0023;camera.rotation.x+=e.movementY*.0023;camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x));}});
+let dragStartX=0,dragStartY=0,isDragging=false;
+canvas.addEventListener("mousedown",e=>{if(started&&!paused&&document.pointerLockElement!==canvas){isDragging=true;dragStartX=e.clientX;dragStartY=e.clientY;e.preventDefault();}});
+document.addEventListener("mousemove",e=>{
+ if(document.pointerLockElement===canvas&&started&&!paused){
+  camera.rotation.y+=e.movementX*.0023;camera.rotation.x+=e.movementY*.0023;camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x));
+ }else if(isDragging&&started&&!paused){
+  const dx=(e.clientX-dragStartX)*.0023;const dy=(e.clientY-dragStartY)*.0023;
+  camera.rotation.y+=dx;camera.rotation.x+=dy;camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x));
+  dragStartX=e.clientX;dragStartY=e.clientY;
+ }
+});
+document.addEventListener("mouseup",e=>{isDragging=false;});
 document.addEventListener("keydown",e=>{if(e.code==="KeyE"&&started&&!paused){keys.KeyE=true;e.preventDefault();return;}if(!e.repeat){keys[e.code]=true;if(["Space","ArrowUp","ArrowDown"].includes(e.code))e.preventDefault();if(e.code==="Escape"&&started)togglePause();if(e.code==="KeyR")reload();if(e.code==="Digit1")setWeapon(0);if(e.code==="Digit2")setWeapon(1);if(e.code==="KeyQ")setWeapon(activeWeaponIndex===0?1:0);}});
 document.addEventListener("keyup",e=>{keys[e.code]=false;});
 $("start").addEventListener("click",startGame);$("pause").addEventListener("click",togglePause);$("resume").addEventListener("click",togglePause);$("exit").addEventListener("click",leave);$("exit2").addEventListener("click",leave);$("exit3").addEventListener("click",leave);$("reload").addEventListener("click",reload);$("again").addEventListener("click",()=>{resetGame();$("endmenu").classList.add("hide");$("intro").classList.remove("hide");started=false;paused=false;});
