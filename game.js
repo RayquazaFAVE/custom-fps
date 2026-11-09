@@ -32,7 +32,7 @@ if(window.ResizeObserver){
   if(canvas){canvas.width=canvas.clientWidth||800;canvas.height=canvas.clientHeight||600;if(engine)engine.resize();}
  }).observe(canvas.parentElement||document.body);
 }
-let scene,camera,gunRoot=null,baseFov=Math.PI/2.8,started=false,paused=false,mouseHeld=false,eHeld=false,aimHeld=false,aimZoom=1,health=100,shield=50,maxShield=50,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,recoilKick=0,gunKick=0,spreadKick=0,crouched=false,burstRemaining=0,burstTimer=0,activeWeaponIndex=0,credits=999999;
+let scene,camera,gunRoot=null,baseFov=Math.PI/2.8,started=false,paused=false,mouseHeld=false,eHeld=false,aimHeld=false,aimZoom=1,health=100,shield=50,maxShield=50,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,recoilKick=0,gunKick=0,spreadKick=0,crouched=false,burstRemaining=0,burstTimer=0,activeWeaponIndex=0,credits=999999,netSocket=null,myName="Operator",netLastSend=0,mpCount=1;
 const MOVE_SPEED=6.75, WALK_SPEED=8, ARENA=100;
 const catalog=window.CustomFPSWeapons;
 
