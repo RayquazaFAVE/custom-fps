@@ -101,13 +101,15 @@ let loadout = defaultLoadout(); // Vandal primary + Classic secondary
 let ownedSecondaries = new Set(["classic"]); // Classic is free and always owned
 
 function saveLoadout() {
-  // Session-only: nothing is persisted to localStorage
+  // Session-only: persists loadout within the current browser tab so it
+  // carries from the lobby to the match. Clears when the tab is closed.
+  try{sessionStorage.setItem("customfps-loadout",JSON.stringify({loadout}));}catch(e){}
 }
 function saveOwned() {
-  // Session-only: nothing is persisted to localStorage
+  // Session-only: nothing is persisted
 }
 function saveCredits() {
-  // Session-only: nothing is persisted to localStorage
+  // Session-only: nothing is persisted
 }
 
 function renderCoreCatalog() {

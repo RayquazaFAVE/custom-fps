@@ -37,7 +37,12 @@ const MOVE_SPEED=6.75, WALK_SPEED=8, ARENA=100;
 const catalog=window.CustomFPSWeapons;
 
 function readMatchLoadout(){
- // Session-only: no localStorage. Always deploy with the default loadout.
+ // Session-only: read loadout saved from lobby via sessionStorage.
+ // Clears automatically when the tab is closed — no persistent storage.
+ try{
+  const saved=JSON.parse(sessionStorage.getItem("customfps-loadout")||"null");
+  if(saved&&saved.loadout&&catalog.getWeapon(saved.loadout.core)) return catalog.normalizeLoadout(saved.loadout);
+ }catch(e){}
  return catalog.defaultLoadout();
 }
 const matchLoadout=Object.freeze(readMatchLoadout());
