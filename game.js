@@ -42,7 +42,8 @@ function readMatchLoadout(){
  }catch(e){}
  return catalog.defaultLoadout();
 }
-if(!window.CustomFPSWeapons){
+try{
+ if(!window.CustomFPSWeapons){
  alert("GAME SETUP ERROR: Weapon catalog not loaded.");
  window.CustomFPSWeapons={getWeapon:()=>({id:"vandal",name:"VANDAL",classId:"ar"}),matchWeapon:()=>({}),weapons:[],speedMultiplier:()=>1,getClass:()=>({name:"",color:"#b7f34a"}),defaultLoadout:()=>({loadout:{core:"vandal"}}),normalizeLoadout:()=>({loadout:{core:"vandal"}})};
 }
@@ -55,6 +56,9 @@ const activeSecondary=Object.freeze(catalog.matchWeapon(matchSecondary));
 const activeKnife=Object.freeze(catalog.matchWeapon(matchKnife));
 const weaponIndex=catalog.weapons.indexOf(matchPrimary);
 initNetwork();
+}catch(e){
+ alert("GAME SETUP ERROR: "+(e.message||String(e)));
+}
 function material(name,color,roughness=1,emissive=null){const m=new B.StandardMaterial(name,scene);m.diffuseColor=B.Color3.FromHexString(color);m.specularColor=new B.Color3(.12,.12,.12);m.roughness=roughness;if(emissive)m.emissiveColor=B.Color3.FromHexString(emissive);return m;}
 function block(name,x,y,z,sx,sy,sz,mat){const o=B.MeshBuilder.CreateBox(name,{width:sx,height:sy,depth:sz},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
 function flat(name,x,z,sx,sz,y,mat){const o=B.MeshBuilder.CreateGround(name,{width:sx,height:sz,subdivisions:1},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
