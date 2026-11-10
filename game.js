@@ -42,23 +42,29 @@ function readMatchLoadout(){
  }catch(e){}
  return catalog.defaultLoadout();
 }
+let matchLoadout,matchPrimary,matchSecondary,matchKnife,activeWeapon,activeSecondary,activeKnife,weaponIndex;
 try{
- if(!window.CustomFPSWeapons){
- showError("GAME SETUP ERROR","Weapon catalog not loaded.");
- window.CustomFPSWeapons={getWeapon:()=>({id:"vandal",name:"VANDAL",classId:"ar"}),matchWeapon:()=>({}),weapons:[],speedMultiplier:()=>1,getClass:()=>({name:"",color:"#b7f34a"}),defaultLoadout:()=>({loadout:{core:"vandal"}}),normalizeLoadout:()=>({loadout:{core:"vandal"}})};
-}
-const matchLoadout=Object.freeze(readMatchLoadout());
-const matchPrimary=catalog.getWeapon(matchLoadout.core);
-const matchSecondary=catalog.getWeapon(matchLoadout.secondary||"classic");
-const matchKnife=catalog.getWeapon("knife");
-const activeWeapon=Object.freeze(catalog.matchWeapon(matchPrimary));
-const activeSecondary=Object.freeze(catalog.matchWeapon(matchSecondary));
-const activeKnife=Object.freeze(catalog.matchWeapon(matchKnife));
-const weaponIndex=catalog.weapons.indexOf(matchPrimary);
-initNetwork();
+ matchLoadout=Object.freeze(readMatchLoadout());
+ matchPrimary=catalog.getWeapon(matchLoadout.core);
+ matchSecondary=catalog.getWeapon(matchLoadout.secondary||"classic");
+ matchKnife=catalog.getWeapon("knife");
+ activeWeapon=Object.freeze(catalog.matchWeapon(matchPrimary));
+ activeSecondary=Object.freeze(catalog.matchWeapon(matchSecondary));
+ activeKnife=Object.freeze(catalog.matchWeapon(matchKnife));
+ weaponIndex=catalog.weapons.indexOf(matchPrimary);
+ initNetwork();
 }catch(e){
- showError("GAME SETUP ERROR",""+(e.message||String(e)),e.stack);
-}
+ showError("GAME SETUP ERROR",""+(e.message||String(e)),e.stack);}
+try{
+ const matchLoadout=Object.freeze(readMatchLoadout());
+ const matchPrimary=catalog.getWeapon(matchLoadout.core);
+ const matchSecondary=catalog.getWeapon(matchLoadout.secondary||"classic");
+ const matchKnife=catalog.getWeapon("knife");
+ const activeWeapon=Object.freeze(catalog.matchWeapon(matchPrimary));
+ const activeSecondary=Object.freeze(catalog.matchWeapon(matchSecondary));
+ const activeKnife=Object.freeze(catalog.matchWeapon(matchKnife));
+ const weaponIndex=catalog.weapons.indexOf(matchPrimary);
+}catch(e){}
 function material(name,color,roughness=1,emissive=null){const m=new B.StandardMaterial(name,scene);m.diffuseColor=B.Color3.FromHexString(color);m.specularColor=new B.Color3(.12,.12,.12);m.roughness=roughness;if(emissive)m.emissiveColor=B.Color3.FromHexString(emissive);return m;}
 function block(name,x,y,z,sx,sy,sz,mat){const o=B.MeshBuilder.CreateBox(name,{width:sx,height:sy,depth:sz},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
 function flat(name,x,z,sx,sz,y,mat){const o=B.MeshBuilder.CreateGround(name,{width:sx,height:sz,subdivisions:1},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
@@ -342,6 +348,7 @@ function startGame(){
   try{showToast("Click and drag to look around");}catch(e){}
  }catch(e){showError("startGame failed",""+e.message,e.stack);}
 }
+window.startGame=startGame;
 function togglePause(){if(!started)return;paused=!paused;$("pausemenu").classList.toggle("hide",!paused);if(paused&&document.pointerLockElement)document.exitPointerLock();else if(!paused&&canvas.requestPointerLock)canvas.requestPointerLock();}
 function endGame(win){paused=true;$("endtitle").textContent=win?"TEST COMPLETE":"OPERATOR DOWN";$("endcopy").textContent=win?"All five training drones eliminated. Arena clear.":"You were tagged out during testing. Reset and try again.";$("endmenu").classList.remove("hide");if(document.pointerLockElement)document.exitPointerLock();}
 function leave(){if(document.pointerLockElement)document.exitPointerLock();location.href="index.html";}
