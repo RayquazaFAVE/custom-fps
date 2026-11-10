@@ -95,21 +95,21 @@ function buildWeaponModel(w){
  const wood=["remington870","svd","pkm","rpk"].includes(w.model);
  const furniture=wood?gunWood:w.model==="aw"?gunOlive:gunGrip;
  const long=["sniper","lmg","shotgun","sidearm"].includes(w.classId), compact=w.classId==="smg";
- const receiverLength=long?.54:.48;
- const receiverZ=long?.72:.60;
+ const receiverLength=long ? .54 : .48;
+ const receiverZ=long ? .72 : .60;
  gunMat.diffuseColor=B.Color3.FromHexString(w.model==="vector"?"#303b3f":"#263238");
- gun=box("receiver",w.model==="m82"?.27:.22,w.model==="m82"?.22:.17,receiverLength,0,-.27,receiverZ);
+ gun=box("receiver",w.model==="m82" ? .27 : .22,w.model==="m82" ? .22 : .17,receiverLength,0,-.27,receiverZ);
  box("upper receiver",.205,.085,receiverLength,0,-.155,receiverZ,gunDark);
- const barrelLength=w.model==="m82"?.70:w.classId==="sniper"?.62:w.classId==="lmg"?.48:w.classId==="shotgun"?.58:w.classId==="sidearm"?.22:compact?.20:.34;
+ const barrelLength=w.model==="m82" ? .70:w.classId==="sniper" ? .62:w.classId==="lmg" ? .48:w.classId==="shotgun" ? .58:w.classId==="sidearm" ? .22:compact ? .20 : .34;
  const barrelEnd=.34-barrelLength;
- barrelMesh=tube("barrel",w.model==="m82"?.075:.052,barrelLength,0,-.23,barrelEnd+barrelLength/2,gunAccent);
- tube("muzzle",w.model==="m82"?.13:.08,w.model==="m82"?.18:.08,0,-.23,barrelEnd-.025,gunDark);
+ barrelMesh=tube("barrel",w.model==="m82" ? .075 : .052,barrelLength,0,-.23,barrelEnd+barrelLength/2,gunAccent);
+ tube("muzzle",w.model==="m82" ? .13 : .08,w.model==="m82"?.18:.08,0,-.23,barrelEnd-.025,gunDark);
  if(w.classId==="shotgun"){
   tube("shell tube",.065,barrelLength*.85,0,-.31,.30-barrelLength*.425,gunDark);
   if(w.fireMode==="pump")box("pump fore-end",.19,.14,.25,0,-.29,.10,furniture);
   else box("semi-auto fore-end",.18,.13,.30,0,-.29,.12,gunGrip);
  }else{
-  box("handguard",.205,.145,compact?.25:.36,0,-.25,.20,furniture);
+  box("handguard",.205,.145,compact ? .25 : .36,0,-.25,.20,furniture);
   for(let i=0;i<4;i++)box("handguard rib "+i,.022,.035,.04,.112,-.25,.08+i*.07,gunMetal);
  }
  box("stock",.18,.18,.28,0,-.29,1.02,furniture);
@@ -118,14 +118,14 @@ function buildWeaponModel(w){
  box("cheek rest",.16,.045,.20,0,-.17,1.0,w.model==="svd"?gunWood:gunAccent);
  const grip=box("pistol grip",.12,.24,.15,0,-.46,.72,gunGrip);grip.rotation.x=-.14;
  if(w.classId!=="shotgun"&&w.classId!=="sidearm"){
-  const magZ=w.model==="rpk"?.50:.48;
+  const magZ=w.model==="rpk" ? .50 : .48;
   if(w.model==="rpk"){
    const drum=tube("drum magazine",.30,.17,0,-.48,magZ,gunDark,16);drum.rotation.x=0;drum.rotation.z=Math.PI/2;
   }else if(w.classId==="lmg"){
    box("ammunition box",.32,.27,.27,0,-.46,magZ,w.model==="pkm"?gunOlive:gunDark);
    box("box latch",.34,.04,.20,0,-.60,magZ,gunAccent);
   }else{
-   const mag=box("magazine",w.model==="vector"?.16:.14,compact?.30:.28,w.model==="ump45"?.13:.18,0,-.48,magZ,gunDark);
+   const mag=box("magazine",w.model==="vector" ? .16 : .14,compact ? .30 : .28,w.model==="ump45" ? .13 : .18,0,-.48,magZ,gunDark);
    mag.rotation.x=w.model==="svd"?-.30:w.model==="mp5"?-.18:-.06;
    box("magazine base",.16,.04,.19,0,-.63,magZ,gunAccent);
   }
@@ -145,7 +145,7 @@ function buildWeaponModel(w){
   const left=box("bipod left",.035,.28,.035,-.11,-.40,.10,gunMetal);left.rotation.z=-.25;
   const right=box("bipod right",.035,.28,.035,.11,-.40,.10,gunMetal);right.rotation.z=.25;
  }
- muzzleFlash=B.MeshBuilder.CreateSphere(w.id+" muzzle flash",{diameter:w.model==="m82"?.25:.18,segments:6},scene);
+ muzzleFlash=B.MeshBuilder.CreateSphere(w.id+" muzzle flash",{diameter:w.model==="m82" ? .25 : .18,segments:6},scene);
  muzzleFlash.parent=weaponModelRoot;muzzleFlash.position.set(0,-.23,barrelEnd-.10);
  muzzleFlash.material=gunFlash;muzzleFlash.isVisible=false;muzzleFlash.isPickable=false;
  gunAccent.diffuseColor=B.Color3.FromHexString(w.color);gunAccent.emissiveColor=B.Color3.FromHexString(w.color);
