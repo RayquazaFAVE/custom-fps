@@ -103,7 +103,7 @@ function buildWeaponModel(w){
  const barrelLength=w.model==="m82" ? .70:w.classId==="sniper" ? .62:w.classId==="lmg" ? .48:w.classId==="shotgun" ? .58:w.classId==="sidearm" ? .22:compact ? .20 : .34;
  const barrelEnd=.34-barrelLength;
  barrelMesh=tube("barrel",w.model==="m82" ? .075 : .052,barrelLength,0,-.23,barrelEnd+barrelLength/2,gunAccent);
- tube("muzzle",w.model==="m82" ? .13 : .08,w.model==="m82"?.18:.08,0,-.23,barrelEnd-.025,gunDark);
+ tube("muzzle",w.model==="m82" ? .13 : .08,w.model==="m82" ? .18 : .08,0,-.23,barrelEnd-.025,gunDark);
  if(w.classId==="shotgun"){
   tube("shell tube",.065,barrelLength*.85,0,-.31,.30-barrelLength*.425,gunDark);
   if(w.fireMode==="pump")box("pump fore-end",.19,.14,.25,0,-.29,.10,furniture);
