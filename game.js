@@ -83,8 +83,8 @@ function buildWeaponModel(w){
  weaponModelRoot=new B.TransformNode("viewmodel "+w.id,scene);weaponModelRoot.parent=gunRoot;weaponModelRoot.position.x=.34;
  const sidearmScale=w.classId==="sidearm"?0.55:1;
  const melee=w.classId==="melee";
- const box=(name,width,height,depth,x,y,z,mat=gunMat)=>{const m=B.MeshBuilder.CreateBox(w.id+" "+name,{width*sidearmScale,height*sidearmScale,depth*sidearmScale},scene);m.parent=weaponModelRoot;m.position.set(x*sidearmScale,y*sidearmScale,z*sidearmScale);m.material=mat;m.isPickable=false;return m;};
- const tube=(name,diameter,length,x,y,z,mat=gunMetal,segments=12)=>{const m=B.MeshBuilder.CreateCylinder(w.id+" "+name,{height:length*sidearmScale,diameter*sidearmScale,tessellation:segments},scene);m.parent=weaponModelRoot;m.rotation.x=Math.PI/2;m.position.set(x*sidearmScale,y*sidearmScale,z*sidearmScale);m.material=mat;m.isPickable=false;return m;};
+ const box=(name,width,height,depth,x,y,z,mat=gunMat)=>{const m=B.MeshBuilder.CreateBox(w.id+" "+name,{width: width*sidearmScale, height: height*sidearmScale, depth: depth*sidearmScale},scene);m.parent=weaponModelRoot;m.position.set(x*sidearmScale,y*sidearmScale,z*sidearmScale);m.material=mat;m.isPickable=false;return m;};
+ const tube=(name,diameter,length,x,y,z,mat=gunMetal,segments=12)=>{const m=B.MeshBuilder.CreateCylinder(w.id+" "+name,{height: length*sidearmScale, diameter: diameter*sidearmScale, tessellation: segments},scene);m.parent=weaponModelRoot;m.rotation.x=Math.PI/2;m.position.set(x*sidearmScale,y*sidearmScale,z*sidearmScale);m.material=mat;m.isPickable=false;return m;};
  if(melee){
   const blade=box("knife blade",.03,.55,.015,0,.15,-.35,gunMetal);blade.rotation.z=-.3;
   const handle=box("knife handle",.035,.30,.05,0,.05,-.08,gunDark);handle.rotation.z=.1;
