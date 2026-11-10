@@ -286,8 +286,9 @@ function removeRemotePlayer(id){
 function showToast(s){const el=$("toast");el.textContent=s;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1300);}
 function syncHUD(){
  const w=currentWeapon;
- $("health").textContent=health;$("hpbar").style.width=health+"%";
- if($("shield")){$("shield").textContent=shield;$("shieldbar").style.width=(shield/maxShield*100)+"%";}
+ const total=Math.min(health+shield,150);const pct=Math.min(total/150*100,100);const hpPct=Math.min(health/150*100,100);
+ $("health").textContent=health;$("hpbar").style.width=pct+"%";
+ if(shield>0){$("hpbar").style.background="linear-gradient(to right,#b7f34a "+hpPct+"%,#4cc9f0 "+hpPct+"%,#4cc9f0 100%)";}else{$("hpbar").style.background="#b7f34a";}
  if($("credits"))$("credits").textContent=credits;
  $("ammo").textContent=ammo;
  $("objective").textContent="Eliminate training drones · "+kills+" / 6";
