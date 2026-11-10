@@ -1,7 +1,7 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id);
 const canvas=$("game");
-if(!window.BABYLON){$("engine-error").classList.remove("hide");return;}
+if(!window.BABYLON){showError("Babylon.js not loaded","The 3D engine library failed to load. Check your internet connection and reload the page.");return;}
 const B=window.BABYLON;
 let engine;
 try{
@@ -11,20 +11,17 @@ try{
  canvas.height=canvas.clientHeight||600;
  canvas.style.backgroundColor="#111820";
 }catch(e){
- $("engine-error").classList.remove("hide");
- $("engine-error").textContent="3D engine failed to start: "+e.message;
+ showError("3D engine failed to start",""+e.message,e.stack);
  return;
 }
 // Global error handler: show JS errors on screen instead of hidden console
 window.addEventListener("error",e=>{
  const msg=e.message||e.error&&e.error.message||String(e);
- $("engine-error").classList.remove("hide");
- $("engine-error").textContent="Game error: "+msg;
+ showError("JavaScript error",msg,e.error&&e.error.stack);
  console.error(e);
 });
 window.addEventListener("unhandledrejection",e=>{
- $("engine-error").classList.remove("hide");
- $("engine-error").textContent="Game error: "+(e.reason&&e.reason.message?e.reason.message:String(e.reason));
+ showError("Unhandled promise rejection",""+(e.reason&&e.reason.message?e.reason.message:String(e.reason)),e.reason&&e.reason.stack);
 });
 // Keep canvas sized to the preview iframe container
 if(window.ResizeObserver){
@@ -294,6 +291,14 @@ function removeRemotePlayer(id){
  try{p.root.dispose(true,true);}catch(e){}
 }
 function showToast(s){const el=$("toast");el.textContent=s;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1300);}
+function showError(title,msg,stack){
+ const el=$("engine-error");el.classList.add("show");el.classList.remove("hide");
+ $("error-title").textContent=title||"Game Error";
+ $("error-message").textContent=msg||"An unknown error occurred.";
+ if(stack){$("error-details").style.display="block";$("error-stack").textContent=stack;}else{$("error-details").style.display="none";}
+ console.error(title,msg,stack);
+}
+$("error-reload").addEventListener("click",()=>location.reload());
 function syncHUD(){
  const w=currentWeapon;
  const total=Math.min(health+shield,150);const pct=Math.min(total/150*100,100);const hpPct=Math.min(health/150*100,100);
@@ -316,8 +321,7 @@ function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
 function startGame(){
  if(!scene){
-  $("engine-error").classList.remove("hide");
-  $("engine-error").textContent="Game scene not ready — refresh the page and try again.";
+  showError("Game scene not ready","The 3D scene was not initialized. Refresh the page and try again.");
   return;
  }
  started=true;paused=false;$("intro").classList.add("hide");$("pausemenu").classList.add("hide");canvas.focus();
@@ -518,8 +522,7 @@ function loop(){const now=performance.now();const dt=Math.min(.04,(now-lastTime)
 try{
  createArena();resetGame();engine.runRenderLoop(loop);window.addEventListener("resize",()=>engine.resize());
 }catch(e){
- $("engine-error").classList.remove("hide");
- $("engine-error").textContent="Game failed to start: "+e.message;
+ showError("Game failed to start",""+e.message,e.stack);
 }
 canvas.addEventListener("click",()=>{if(!started)startGame();else if(!paused&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.();});
 canvas.addEventListener("pointerdown",e=>{if(e.button!==0||!started||paused)return;mouseHeld=true;if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.();if(getCurrentWeapon().adsFireMode&&aimHeld)burstRemaining=getCurrentWeapon().adsBurst;shoot();});
