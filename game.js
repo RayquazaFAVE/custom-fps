@@ -132,43 +132,47 @@ function buildWeaponModel(w){
  gunFlash.diffuseColor=B.Color3.FromHexString(w.color);gunFlash.emissiveColor=B.Color3.FromHexString(w.color);
 }
 function createArena(){
-scene=new B.Scene(engine);scene.clearColor=new B.Color4(.48,.72,.88,1);scene.collisionsEnabled=true;scene.gravity=new B.Vector3(0,-18,0);
-scene.fogMode=B.Scene.FOGMODE_EXP2;scene.fogColor=new B.Color3(.55,.74,.9);scene.fogDensity=.0035;
-const sky=new B.HemisphericLight("ambient",new B.Vector3(0,1,0),scene);sky.intensity=.9;sky.groundColor=new B.Color3(.35,.4,.38);
-const sun=new B.DirectionalLight("sun",new B.Vector3(-.45,-1,.25),scene);sun.position.set(20,40,-20);sun.intensity=.7;
-const ground=material("plain ground","#5a6b62"),wall=material("outer wall","#263941"),siteCover=material("site cover","#3c5054"),spawnCover=material("spawn cover","#4a5a52"),trim=material("site trim","#b7f34a",.6,"#273b0c"),siteAMat=material("site A mat","#ff4444",.3,"#ff4444"),siteBMat=material("site B mat","#33a1ff",.3,"#33a1ff");
+scene=new B.Scene(engine);scene.clearColor=new B.Color4(.5,.72,.82,1);scene.collisionsEnabled=true;scene.gravity=new B.Vector3(0,-18,0);
+scene.fogMode=B.Scene.FOGMODE_EXP2;scene.fogColor=new B.Color3(.6,.78,.88);scene.fogDensity=.003;
+const sky=new B.HemisphericLight("ambient",new B.Vector3(0,1,0),scene);sky.intensity=.95;sky.groundColor=new B.Color3(.3,.38,.42);
+const sun=new B.DirectionalLight("sun",new B.Vector3(-.5,-.8,.3),scene);sun.position.set(30,50,-20);sun.intensity=.85;
+const ground=material("plain ground","#8a9a85"),wall=material("outer wall","#6b7a72"),siteCover=material("site cover","#5a6a62"),spawnCover=material("spawn cover","#7a8a82"),siteAMat=material("site A mat","#ff4444",.25,"#ff4444"),siteBMat=material("site B mat","#33a1ff",.25,"#33a1ff");
 const skyDome=B.MeshBuilder.CreateSphere("sky dome",{diameter:900,segments:32,ringCount:16},scene);
 const skyMat=new B.StandardMaterial("sky dome material",scene);skyMat.backFaceCulling=false;skyMat.disableLighting=true;skyMat.vertexColors=true;skyMat.fogEnabled=false;skyMat.diffuseColor=B.Color3.White();skyMat.emissiveColor=B.Color3.White();
 const skyPos=skyDome.getVerticesData(B.VertexBuffer.PositionKind),skyCol=[];
-for(let i=0;i<skyPos.length;i+=3){const t=Math.max(0,Math.min(1,(skyPos[i+1]+450)/900));const c=B.Color3.Lerp(new B.Color3(.8,.88,.94),new B.Color3(.22,.46,.82),t);skyCol.push(c.r,c.g,c.b,1);}
+for(let i=0;i<skyPos.length;i+=3){const t=Math.max(0,Math.min(1,(skyPos[i+1]+450)/900));const c=B.Color3.Lerp(new B.Color3(.82,.9,.94),new B.Color3(.3,.5,.7),t);skyCol.push(c.r,c.g,c.b,1);}
 skyDome.setVerticesData(B.VertexBuffer.ColorKind,skyCol);skyDome.material=skyMat;skyDome.infiniteDistance=true;skyDome.isPickable=false;
-const groundMat=new B.StandardMaterial("arena ground",scene);groundMat.diffuseColor=new B.Color3(.4,.52,.45);groundMat.specularColor=new B.Color3(.06,.06,.06);
+const groundMat=new B.StandardMaterial("arena ground",scene);groundMat.diffuseColor=new B.Color3(.54,.6,.52);groundMat.specularColor=new B.Color3(.04,.04,.04);
 const groundMesh=flat("wide flat plain",60,60,120,120,0,groundMat);groundMesh.receiveShadows=true;
 block("north wall",60,2,120,120,4,1.2,wall);
 block("south wall",60,2,0,120,4,1.2,wall);
 block("west wall",2,2,60,4,120,120,wall);
 block("east wall",118,2,60,4,120,120,wall);
-block("attacker cover A",15,1.2,15,6,2.4,2.4,spawnCover);
-block("attacker cover B",105,1.2,15,6,2.4,2.4,spawnCover);
-block("attacker mid cover",60,1.2,18,8,2.4,3,spawnCover);
-block("defender cover A",15,1.2,105,6,2.4,2.4,spawnCover);
-block("defender cover B",105,1.2,105,6,2.4,2.4,spawnCover);
-block("defender mid cover",60,1.2,102,8,2.4,3,spawnCover);
-block("site A back wall",25,1.2,45,12,2.4,10,siteCover);
-block("site A left wall",16,1.2,55,10,2.4,12,siteCover);
-block("site A center cover",25,1.2,60,5,2.4,4,siteCover);
-block("site A marker",25,2.6,28,1.2,4,1,siteAMat);
-block("site B back wall",95,1.2,45,12,2.4,10,siteCover);
-block("site B right wall",104,1.2,55,10,2.4,12,siteCover);
-block("site B center cover",95,1.2,60,5,2.4,4,siteCover);
-block("site B marker",95,2.6,28,1.2,4,1,siteBMat);
-block("mid left cover",35,1.2,42,5,2.4,6,siteCover);
-block("mid right cover",85,1.2,42,5,2.4,6,siteCover);
-block("mid center cover",60,1.2,60,6,2.4,6,siteCover);
+block("attacker spawn cover",105,1.2,60,5,2.4,8,spawnCover);
+block("attacker side cover",110,1.2,45,3,2.4,6,spawnCover);
+block("defender spawn cover",15,1.2,60,5,2.4,8,spawnCover);
+block("defender side cover",10,1.2,45,3,2.4,6,spawnCover);
+block("site A back wall",50,1.2,22,14,2.4,8,siteCover);
+block("site A left cover",35,1.2,25,6,2.4,6,siteCover);
+block("site A right cover",65,1.2,25,6,2.4,6,siteCover);
+block("site A marker",50,2.6,18,1.5,4,1.5,siteAMat);
+block("site B back wall",50,1.2,98,14,2.4,8,siteCover);
+block("site B left cover",35,1.2,75,6,2.4,6,siteCover);
+block("site B right cover",65,1.2,75,6,2.4,6,siteCover);
+block("site B marker",50,2.6,102,1.5,4,1.5,siteBMat);
+block("mid left cover",35,1.2,50,5,2.4,6,siteCover);
+block("mid right cover",65,1.2,50,5,2.4,6,siteCover);
+block("mid center cover",50,1.2,50,4,2.4,4,siteCover);
+block("A main wall",50,1.2,32,8,2.4,4,siteCover);
+block("B main wall",50,1.2,68,8,2.4,4,siteCover);
+block("A connector left",30,1.2,35,6,2.4,3,siteCover);
+block("A connector right",70,1.2,35,6,2.4,3,siteCover);
+block("B connector left",30,1.2,65,6,2.4,3,siteCover);
+block("B connector right",70,1.2,65,6,2.4,3,siteCover);
 const crateMat=material("crate wood","#6f4f2e");crateMat.edgesWidth=.04;crateMat.edgesColor=new B.Color3(.22,.15,.08);
-[[15,15],[105,15],[15,105],[105,105],[30,20],[90,20],[30,100],[90,100],[20,40],[100,40],[20,80],[100,80],[40,30],[80,30],[40,90],[80,90]].forEach((c,i)=>block("crate "+i,c[0],c[2]/2,c[1],c[2],c[2],c[2],crateMat));
-camera=new B.UniversalCamera("player camera",new B.Vector3(60,1.7,15),scene);camera.attachControl(canvas,true);camera.inertia=0;camera.angularSensibility=2400;camera.speed=0;camera.minZ=.08;camera.fov=baseFov=Math.PI/2.8;camera.checkCollisions=true;camera.applyGravity=false;camera.ellipsoid=new B.Vector3(.35,.85,.35);camera.ellipsoidOffset=new B.Vector3(0,.8,0);camera.keysUp=[87,38];camera.keysDown=[83,40];camera.keysLeft=[65];camera.keysRight=[68];camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
-camera.rotation.set(0,0,0);
+[[15,15],[105,15],[15,105],[105,105],[25,35],[75,35],[25,65],[75,65],[40,40],[60,40],[40,60],[60,60],[35,25],[65,25],[35,75],[65,75]].forEach((c,i)=>block("crate "+i,c[0],c[2]/2,c[1],c[2],c[2],c[2],crateMat));
+camera=new B.UniversalCamera("player camera",new B.Vector3(95,1.7,50),scene);camera.attachControl(canvas,true);camera.inertia=0;camera.angularSensibility=2400;camera.speed=0;camera.minZ=.08;camera.fov=baseFov=Math.PI/2.8;camera.checkCollisions=true;camera.applyGravity=false;camera.ellipsoid=new B.Vector3(.35,.85,.35);camera.ellipsoidOffset=new B.Vector3(0,.8,0);camera.keysUp=[87,38];camera.keysDown=[83,40];camera.keysLeft=[65];camera.keysRight=[68];camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
+camera.rotation.set(0,Math.PI,0);
 gunMat=material("weapon graphite body","#263238");gunAccent=material("weapon accent",currentWeapon.color,.45,currentWeapon.color);
 gunDark=material("weapon dark components","#11191e");gunMetal=material("weapon metal","#7b898b");gunGrip=material("weapon grip","#35464a");
 gunWood=material("weapon wood furniture","#795033");gunOlive=material("weapon olive furniture","#566344");gunFlash=material("weapon muzzle flash",currentWeapon.color,.5,currentWeapon.color);
@@ -192,7 +196,7 @@ try{
 }
 function createTargets(){
  targets=[];
- const spots=[[25,1.1,60],[20,1.1,50],[30,1.1,70],[95,1.1,60],[90,1.1,50],[100,1.1,70]];
+ const spots=[[35,1.1,22],[50,1.1,22],[65,1.1,22],[35,1.1,98],[50,1.1,98],[65,1.1,98]];
  spots.forEach((v,i)=>{
   const root=new B.TransformNode("drone root "+i,scene);root.position.set(v[0],v[1],v[2]);
   const shell=material("drone shell "+i,"#52666a");
@@ -297,7 +301,7 @@ function syncHUD(){
  reloadButton.textContent=reloading?(w.classId==="shotgun"?"LOADING SHELLS…":"RELOADING…"):"RELOAD [R]";
  reloadButton.setAttribute("aria-busy",String(reloading));
 }
-function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;shield=maxShield;kills=0;activeWeaponIndex=0;currentWeapon=activeWeapon;ammo=currentWeapon.mag;reloading=false;reloadTimer=0;fireCooldown=0;burstRemaining=0;burstTimer=0;recoilKick=0;gunKick=0;spreadKick=0;crouched=false;camera.position.set(60,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
+function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;shield=maxShield;kills=0;activeWeaponIndex=0;currentWeapon=activeWeapon;ammo=currentWeapon.mag;reloading=false;reloadTimer=0;fireCooldown=0;burstRemaining=0;burstTimer=0;recoilKick=0;gunKick=0;spreadKick=0;crouched=false;camera.position.set(95,1.7,50);camera.rotation.set(0,Math.PI,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
 function startGame(){
  if(!scene){
