@@ -44,7 +44,7 @@ function readMatchLoadout(){
 }
 try{
  if(!window.CustomFPSWeapons){
- alert("GAME SETUP ERROR: Weapon catalog not loaded.");
+ showError("GAME SETUP ERROR","Weapon catalog not loaded.");
  window.CustomFPSWeapons={getWeapon:()=>({id:"vandal",name:"VANDAL",classId:"ar"}),matchWeapon:()=>({}),weapons:[],speedMultiplier:()=>1,getClass:()=>({name:"",color:"#b7f34a"}),defaultLoadout:()=>({loadout:{core:"vandal"}}),normalizeLoadout:()=>({loadout:{core:"vandal"}})};
 }
 const matchLoadout=Object.freeze(readMatchLoadout());
@@ -57,7 +57,7 @@ const activeKnife=Object.freeze(catalog.matchWeapon(matchKnife));
 const weaponIndex=catalog.weapons.indexOf(matchPrimary);
 initNetwork();
 }catch(e){
- alert("GAME SETUP ERROR: "+(e.message||String(e)));
+ showError("GAME SETUP ERROR",""+(e.message||String(e)),e.stack);
 }
 function material(name,color,roughness=1,emissive=null){const m=new B.StandardMaterial(name,scene);m.diffuseColor=B.Color3.FromHexString(color);m.specularColor=new B.Color3(.12,.12,.12);m.roughness=roughness;if(emissive)m.emissiveColor=B.Color3.FromHexString(emissive);return m;}
 function block(name,x,y,z,sx,sy,sz,mat){const o=B.MeshBuilder.CreateBox(name,{width:sx,height:sy,depth:sz},scene);o.position.set(x,y,z);o.material=mat;o.checkCollisions=true;return o;}
@@ -300,7 +300,14 @@ function removeRemotePlayer(id){
 }
 function showToast(s){const el=$("toast");el.textContent=s;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1300);}
 function showError(title,msg,stack){
- const el=$("engine-error");if(el){el.style.display="flex";el.style.zIndex="99999";$("error-title").textContent=title||"Game Error";$("error-message").textContent=msg||"An unknown error occurred.";if(stack){$("error-details").style.display="block";$("error-stack").textContent=stack;}else{$("error-details").style.display="none";}}
+ const el=$("engine-error");
+ if(el){
+  el.classList.remove("hide");
+  el.style.cssText="display:flex!important;z-index:99999!important;";
+  $("error-title").textContent=title||"Game Error";
+  $("error-message").textContent=msg||"An unknown error occurred.";
+  if(stack){$("error-details").style.display="block";$("error-stack").textContent=stack;}else{$("error-details").style.display="none";}
+ }
  canvas.style.backgroundColor="#330000";
  console.error(title,msg,stack);
 }
@@ -529,7 +536,7 @@ function loop(){const now=performance.now();const dt=Math.min(.04,(now-lastTime)
 try{
  createArena();resetGame();engine.runRenderLoop(loop);window.addEventListener("resize",()=>engine.resize());
 }catch(e){
- alert("GAME INIT ERROR: "+(e.message||String(e)));
+ showError("GAME INIT ERROR",""+(e.message||String(e)),e.stack);
 }
 canvas.addEventListener("click",()=>{if(!started)startGame();else if(!paused&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.();});
 canvas.addEventListener("pointerdown",e=>{if(e.button!==0||!started||paused)return;mouseHeld=true;if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.();if(getCurrentWeapon().adsFireMode&&aimHeld)burstRemaining=getCurrentWeapon().adsBurst;shoot();});
@@ -557,12 +564,12 @@ document.addEventListener("mousemove",e=>{
 document.addEventListener("mouseup",e=>{isDragging=false;});
 document.addEventListener("keydown",e=>{if(e.code==="KeyE"&&started&&!paused){keys.KeyE=true;e.preventDefault();return;}if(!e.repeat){keys[e.code]=true;if(["Space","ArrowUp","ArrowDown"].includes(e.code))e.preventDefault();if(e.code==="Escape"&&started)togglePause();if(e.code==="KeyR")reload();if(e.code==="Digit1")setWeapon(0);if(e.code==="Digit2")setWeapon(1);if(e.code==="Digit3")setWeapon(2);if(e.code==="KeyQ")setWeapon(activeWeaponIndex===0?1:0);}});
 document.addEventListener("keyup",e=>{keys[e.code]=false;});
-try{$("start").addEventListener("click",()=>startGame());}catch(e){alert("START BUTTON ERROR: "+(e.message||String(e)));}
-try{$("pause").addEventListener("click",togglePause);}catch(e){alert("PAUSE BUTTON ERROR: "+(e.message||String(e)));}
-try{$("resume").addEventListener("click",togglePause);}catch(e){alert("RESUME BUTTON ERROR: "+(e.message||String(e)));}
-try{$("exit").addEventListener("click",leave);}catch(e){alert("EXIT BUTTON ERROR: "+(e.message||String(e)));}
-try{$("exit2").addEventListener("click",leave);}catch(e){alert("EXIT2 BUTTON ERROR: "+(e.message||String(e)));}
-try{$("exit3").addEventListener("click",leave);}catch(e){alert("EXIT3 BUTTON ERROR: "+(e.message||String(e)));}
-try{$("reload").addEventListener("click",reload);}catch(e){alert("RELOAD BUTTON ERROR: "+(e.message||String(e)));}
-try{$("again").addEventListener("click",()=>{resetGame();try{$("endmenu").style.display="none";}catch(e){}try{$("intro").style.display="grid";}catch(e){}started=false;paused=false;});}catch(e){alert("AGAIN BUTTON ERROR: "+(e.message||String(e)));}
+try{$("start").addEventListener("click",()=>startGame());}catch(e){showError("START BUTTON ERROR",""+(e.message||String(e)),e.stack);}
+try{$("pause").addEventListener("click",togglePause);}catch(e){showError("PAUSE BUTTON ERROR",""+(e.message||String(e)),e.stack);}
+try{$("resume").addEventListener("click",togglePause);}catch(e){showError("RESUME BUTTON ERROR",""+(e.message||String(e)),e.stack);}
+try{$("exit").addEventListener("click",leave);}catch(e){showError("EXIT BUTTON ERROR",""+(e.message||String(e)),e.stack);}
+try{$("exit2").addEventListener("click",leave);}catch(e){showError("EXIT2 BUTTON ERROR",""+(e.message||String(e)),e.stack);}
+try{$("exit3").addEventListener("click",leave);}catch(e){showError("EXIT3 BUTTON ERROR",""+(e.message||String(e)),e.stack);}
+try{$("reload").addEventListener("click",reload);}catch(e){showError("RELOAD BUTTON ERROR",""+(e.message||String(e)),e.stack);}
+try{$("again").addEventListener("click",()=>{resetGame();try{$("endmenu").style.display="none";}catch(e){}try{$("intro").style.display="grid";}catch(e){}started=false;paused=false;});}catch(e){showError("AGAIN BUTTON ERROR",""+(e.message||String(e)),e.stack);}
 })();
