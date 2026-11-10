@@ -306,15 +306,18 @@ function removeRemotePlayer(id){
 }
 function showToast(s){const el=$("toast");el.textContent=s;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1300);}
 function showError(title,msg,stack){
- const el=$("engine-error");
- if(el){
-  el.classList.remove("hide");
-  el.style.cssText="display:flex!important;z-index:99999!important;";
-  $("error-title").textContent=title||"Game Error";
-  $("error-message").textContent=msg||"An unknown error occurred.";
-  if(stack){$("error-details").style.display="block";$("error-stack").textContent=stack;}else{$("error-details").style.display="none";}
- }
- canvas.style.backgroundColor="#330000";
+ try{
+  const el=$("engine-error");
+  if(el){
+   el.classList.remove("hide");
+   el.style.cssText="display:flex!important;z-index:99999!important;";
+   $("error-title").textContent=title||"Game Error";
+   $("error-message").textContent=msg||"An unknown error occurred.";
+   if(stack){$("error-details").style.display="block";$("error-stack").textContent=stack;}else{$("error-details").style.display="none";}
+  }
+  canvas.style.backgroundColor="#330000";
+ }catch(e){}
+ alert("GAME ERROR: "+title+"\n"+(msg||"An unknown error occurred."));
  console.error(title,msg,stack);
 }
 function syncHUD(){
@@ -348,7 +351,7 @@ function startGame(){
   try{showToast("Click and drag to look around");}catch(e){}
  }catch(e){showError("startGame failed",""+e.message,e.stack);}
 }
-window.startGame=startGame;
+window.gameStartGame=startGame;
 function togglePause(){if(!started)return;paused=!paused;$("pausemenu").classList.toggle("hide",!paused);if(paused&&document.pointerLockElement)document.exitPointerLock();else if(!paused&&canvas.requestPointerLock)canvas.requestPointerLock();}
 function endGame(win){paused=true;$("endtitle").textContent=win?"TEST COMPLETE":"OPERATOR DOWN";$("endcopy").textContent=win?"All five training drones eliminated. Arena clear.":"You were tagged out during testing. Reset and try again.";$("endmenu").classList.remove("hide");if(document.pointerLockElement)document.exitPointerLock();}
 function leave(){if(document.pointerLockElement)document.exitPointerLock();location.href="index.html";}
