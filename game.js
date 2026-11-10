@@ -170,13 +170,13 @@ block("south wall",60,4,0,120,8,1.2,wall);
 block("west wall",2,4,60,4,8,120,wall);
 block("east wall",118,4,60,4,8,120,wall);
 
-// Spawn indents into outer walls - color coded
-// Attacker spawn indent (red) on east wall
+// Spawn indents into outer walls - color coded ground circles
+// Attacker spawn (red) on east wall - color the ground beneath instead of floating geometry
 block("attacker spawn indent",112,4,60,6,8,12,spawnCover);
-block("attacker spawn color",112,8.1,60,4,0.2,8,material("attacker spawn color","#ff4444",.8));
-// Defender spawn indent (blue) on west wall
+flat("attacker spawn ground",112,60,10,10,0,material("attacker spawn ground","#ff4444",.6));
+// Defender spawn (blue) on west wall
 block("defender spawn indent",8,4,60,6,8,12,spawnCover);
-block("defender spawn color",8,8.1,60,4,0.2,8,material("defender spawn color","#33a1ff",.8));
+flat("defender spawn ground",8,60,10,10,0,material("defender spawn ground","#33a1ff",.6));
 
 // Sites moved off to sides - small blue rectangular prisms
 // Site A: top-left area (off to side, not visible from attacker spawn)
