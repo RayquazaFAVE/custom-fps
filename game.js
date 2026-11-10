@@ -133,53 +133,41 @@ function buildWeaponModel(w){
 }
 function createArena(){
 scene=new B.Scene(engine);scene.clearColor=new B.Color4(.48,.72,.88,1);scene.collisionsEnabled=true;scene.gravity=new B.Vector3(0,-18,0);
-scene.fogMode=B.Scene.FOGMODE_EXP2;scene.fogColor=new B.Color3(.55,.74,.9);scene.fogDensity=.0045;
+scene.fogMode=B.Scene.FOGMODE_EXP2;scene.fogColor=new B.Color3(.55,.74,.9);scene.fogDensity=.0035;
 const sky=new B.HemisphericLight("ambient",new B.Vector3(0,1,0),scene);sky.intensity=.9;sky.groundColor=new B.Color3(.35,.4,.38);
 const sun=new B.DirectionalLight("sun",new B.Vector3(-.45,-1,.25),scene);sun.position.set(20,40,-20);sun.intensity=.7;
-const ground=material("plain ground","#65716a"),wall=material("end walls","#263941"),barrier=material("side barriers","#52696b"),trim=material("lime trim","#b7f34a",.6,"#273b0c"),tower=material("tower concrete","#63767b"),cover=material("simple cover","#3c5054");
+const ground=material("plain ground","#5a6b62"),wall=material("outer wall","#263941"),siteCover=material("site cover","#3c5054"),spawnCover=material("spawn cover","#4a5a52"),trim=material("site trim","#b7f34a",.6,"#273b0c"),siteAMat=material("site A mat","#ff4444",.3,"#ff4444"),siteBMat=material("site B mat","#33a1ff",.3,"#33a1ff");
 const skyDome=B.MeshBuilder.CreateSphere("sky dome",{diameter:900,segments:32,ringCount:16},scene);
 const skyMat=new B.StandardMaterial("sky dome material",scene);skyMat.backFaceCulling=false;skyMat.disableLighting=true;skyMat.vertexColors=true;skyMat.fogEnabled=false;skyMat.diffuseColor=B.Color3.White();skyMat.emissiveColor=B.Color3.White();
 const skyPos=skyDome.getVerticesData(B.VertexBuffer.PositionKind),skyCol=[];
 for(let i=0;i<skyPos.length;i+=3){const t=Math.max(0,Math.min(1,(skyPos[i+1]+450)/900));const c=B.Color3.Lerp(new B.Color3(.8,.88,.94),new B.Color3(.22,.46,.82),t);skyCol.push(c.r,c.g,c.b,1);}
 skyDome.setVerticesData(B.VertexBuffer.ColorKind,skyCol);skyDome.material=skyMat;skyDome.infiniteDistance=true;skyDome.isPickable=false;
-const gridTex=new B.DynamicTexture("arena grid",{width:512,height:512},scene);const gctx=gridTex.getContext();
-gctx.fillStyle="#39433e";gctx.fillRect(0,0,512,512);
-gctx.strokeStyle="#4c5952";gctx.lineWidth=8;gctx.strokeRect(0,0,512,512);
-gctx.strokeStyle="#5b6a62";gctx.lineWidth=2;for(let i=1;i<10;i++){const p=(i/10)*512;gctx.beginPath();gctx.moveTo(p,0);gctx.lineTo(p,512);gctx.stroke();gctx.beginPath();gctx.moveTo(0,p);gctx.lineTo(512,p);gctx.stroke();}
-gctx.strokeStyle="#b7f34a";gctx.lineWidth=4;gctx.strokeRect(6,6,500,500);gridTex.update();
-const groundMat=new B.StandardMaterial("arena ground",scene);groundMat.diffuseTexture=gridTex;groundMat.diffuseTexture.wrapU=B.Texture.WRAP_ADDRESSMODE;groundMat.diffuseTexture.wrapV=B.Texture.WRAP_ADDRESSMODE;groundMat.uScale=10;groundMat.vScale=10;groundMat.specularColor=new B.Color3(.06,.06,.06);
-const groundMesh=flat("wide flat plain",50,50,100,100,0,groundMat);groundMesh.receiveShadows=true;
-block("north end wall",50,2,0,100,4,1.2,wall);
-block("south end wall",50,2,100,100,4,1.2,wall);
-block("north wall trim",50,4.05,0,100,.25,1.3,trim);
-block("south wall trim",50,4.05,100,100,.25,1.3,trim);
-for(const z of [10,22,34,46,58,70,82,94]){
-  block("west side barrier",1.5,.9,z,3,1.8,2.4,barrier);
-  block("east side barrier",98.5,.9,z,3,1.8,2.4,barrier);
-  block("west barrier stripe",1.5,1.83,z,1.8,.05,2.0,trim);
-  block("east barrier stripe",98.5,1.83,z,1.8,.05,2.0,trim);
-}
-for(const z of [8,92]){
-  block("sniper tower base",50,.5,z,7,1,7,tower);
-  block("sniper tower platform",50,3.2,z,8,.3,8,wall);
-  block("tower parapet",50,3.8,z-3.7,8,.9,.3,barrier);
-  block("tower parapet",50,3.8,z+3.7,8,.9,.3,barrier);
-  block("tower parapet",46.2,3.8,z,.3,.9,7.5,barrier);
-  block("tower parapet",53.8,3.8,z,.3,.9,7.5,barrier);
-  for(let i=0;i<8;i++)block("tower stair",50,.25+i*.35,z+(z<50?1:-1)*(2.7+i*.48),2,.35,.55,cover);
-}
-[[25,25],[50,25],[75,25],[25,50],[75,50],[25,75],[50,75],[75,75]].forEach(([x,z])=>block("field cover",x,.65,z,3,1.3,2,cover));
+const groundMat=new B.StandardMaterial("arena ground",scene);groundMat.diffuseColor=new B.Color3(.4,.52,.45);groundMat.specularColor=new B.Color3(.06,.06,.06);
+const groundMesh=flat("wide flat plain",60,60,120,120,0,groundMat);groundMesh.receiveShadows=true;
+block("north wall",60,2,120,120,4,1.2,wall);
+block("south wall",60,2,0,120,4,1.2,wall);
+block("west wall",2,2,60,4,120,120,wall);
+block("east wall",118,2,60,4,120,120,wall);
+block("attacker cover A",15,1.2,15,6,2.4,2.4,spawnCover);
+block("attacker cover B",105,1.2,15,6,2.4,2.4,spawnCover);
+block("attacker mid cover",60,1.2,18,8,2.4,3,spawnCover);
+block("defender cover A",15,1.2,105,6,2.4,2.4,spawnCover);
+block("defender cover B",105,1.2,105,6,2.4,2.4,spawnCover);
+block("defender mid cover",60,1.2,102,8,2.4,3,spawnCover);
+block("site A back wall",25,1.2,45,12,2.4,10,siteCover);
+block("site A left wall",16,1.2,55,10,2.4,12,siteCover);
+block("site A center cover",25,1.2,60,5,2.4,4,siteCover);
+block("site A marker",25,2.6,28,1.2,4,1,siteAMat);
+block("site B back wall",95,1.2,45,12,2.4,10,siteCover);
+block("site B right wall",104,1.2,55,10,2.4,12,siteCover);
+block("site B center cover",95,1.2,60,5,2.4,4,siteCover);
+block("site B marker",95,2.6,28,1.2,4,1,siteBMat);
+block("mid left cover",35,1.2,42,5,2.4,6,siteCover);
+block("mid right cover",85,1.2,42,5,2.4,6,siteCover);
+block("mid center cover",60,1.2,60,6,2.4,6,siteCover);
 const crateMat=material("crate wood","#6f4f2e");crateMat.edgesWidth=.04;crateMat.edgesColor=new B.Color3(.22,.15,.08);
-const barrelMat=material("metal barrel","#7a5230");
-const rockMat=material("rock","#4a5250");
-[[12,12,2],[88,12,2],[12,88,2],[88,88,2],[30,18,2],[70,18,2],[30,82,2],[70,82,2],[15,52,1.6],[85,48,1.6],[42,28,1.5],[58,72,1.5]].forEach((c,i)=>block("crate "+i,c[0],c[2]/2,c[1],c[2],c[2],c[2],crateMat));
-[[20,14],[80,14],[20,86],[80,86],[44,12],[56,12],[44,88],[56,88],[16,70],[84,30]].forEach((c,i)=>{const m=B.MeshBuilder.CreateCylinder("barrel "+i,{height:1.3,diameter:.9,tessellation:14},scene);m.position.set(c[0],.65,c[1]);m.material=barrelMat;m.checkCollisions=true;});
-[[10,32,.9],[90,32,.9],[10,68,.8],[90,68,.8],[40,66,1.1],[60,34,1.0],[18,58,.7],[82,46,.8],[52,30,.6],[48,70,.6]].forEach((c,i)=>{const m=B.MeshBuilder.CreateIcoSphere("rock "+i,{radius:c[2],subdivisions:2},scene);m.position.set(c[0],c[2]*.6,c[1]);m.material=rockMat;m.checkCollisions=true;});
-for(const [x,z] of [[8,18],[92,18],[8,82],[92,82]])block("accent pillar",x,4,z,.7,8,.7,material("accent pillar mat","#243740",.7,"#b7f34a"));
-block("beacon base",50,.25,50,8,.5,8,tower);
-const beaconCore=B.MeshBuilder.CreateSphere("beacon core",{diameter:1.6,segments:14},scene);beaconCore.position.set(50,2.1,50);beaconCore.material=material("beacon glow","#b7f34a",.4,"#9ee63f");beaconCore.isPickable=false;
-const beaconLight=new B.PointLight("beacon light",new B.Vector3(50,3,50),scene);beaconLight.intensity=10;beaconLight.diffuse=new B.Color3(.7,1,.45);beaconLight.range=20;
-camera=new B.UniversalCamera("player camera",new B.Vector3(50,1.7,15),scene);camera.attachControl(canvas,true);camera.inertia=0;camera.angularSensibility=2400;camera.speed=0;camera.minZ=.08;camera.fov=baseFov=Math.PI/2.8;camera.checkCollisions=true;camera.applyGravity=false;camera.ellipsoid=new B.Vector3(.35,.85,.35);camera.ellipsoidOffset=new B.Vector3(0,.8,0);camera.keysUp=[87,38];camera.keysDown=[83,40];camera.keysLeft=[65];camera.keysRight=[68];camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
+[[15,15],[105,15],[15,105],[105,105],[30,20],[90,20],[30,100],[90,100],[20,40],[100,40],[20,80],[100,80],[40,30],[80,30],[40,90],[80,90]].forEach((c,i)=>block("crate "+i,c[0],c[2]/2,c[1],c[2],c[2],c[2],crateMat));
+camera=new B.UniversalCamera("player camera",new B.Vector3(60,1.7,15),scene);camera.attachControl(canvas,true);camera.inertia=0;camera.angularSensibility=2400;camera.speed=0;camera.minZ=.08;camera.fov=baseFov=Math.PI/2.8;camera.checkCollisions=true;camera.applyGravity=false;camera.ellipsoid=new B.Vector3(.35,.85,.35);camera.ellipsoidOffset=new B.Vector3(0,.8,0);camera.keysUp=[87,38];camera.keysDown=[83,40];camera.keysLeft=[65];camera.keysRight=[68];camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 camera.rotation.set(0,0,0);
 gunMat=material("weapon graphite body","#263238");gunAccent=material("weapon accent",currentWeapon.color,.45,currentWeapon.color);
 gunDark=material("weapon dark components","#11191e");gunMetal=material("weapon metal","#7b898b");gunGrip=material("weapon grip","#35464a");
@@ -193,7 +181,7 @@ scene.meshes.forEach(m=>{
  if(m.name==="sky dome"||m.name==="player camera"||m.name.startsWith("health bar"))return;
  let par=m.parent;while(par){if(par===camera)return;par=par.parent;}
  m.receiveShadows=true;
- if(m.name!=="beacon core"&&m.name!=="wide flat plain")shadowGen.addShadowCaster(m);
+ if(m.name!=="site A marker"&&m.name!=="site B marker"&&m.name!=="wide flat plain")shadowGen.addShadowCaster(m);
 });
 try{
  const pp=new B.DefaultRenderingPipeline("default",true,engine,[camera]);
@@ -204,7 +192,7 @@ try{
 }
 function createTargets(){
  targets=[];
- const spots=[[25,1.1,35],[38,1.1,48],[50,1.1,60],[64,1.1,43],[76,1.1,68]];
+ const spots=[[25,1.1,60],[20,1.1,50],[30,1.1,70],[95,1.1,60],[90,1.1,50],[100,1.1,70]];
  spots.forEach((v,i)=>{
   const root=new B.TransformNode("drone root "+i,scene);root.position.set(v[0],v[1],v[2]);
   const shell=material("drone shell "+i,"#52666a");
@@ -298,7 +286,7 @@ function syncHUD(){
  if($("shield")){$("shield").textContent=shield;$("shieldbar").style.width=(shield/maxShield*100)+"%";}
  if($("credits"))$("credits").textContent=credits;
  $("ammo").textContent=ammo;
- $("objective").textContent="Eliminate training drones · "+kills+" / 5";
+ $("objective").textContent="Eliminate training drones · "+kills+" / 6";
  $("weapon-name").textContent=w.name;
  $("weapon-class").textContent=catalog.getClass(w.classId).name+" · SLOT "+(activeWeaponIndex===0?"PRIMARY":"SECONDARY");
  if($("deployed-weapon"))$("deployed-weapon").textContent=w.name;
@@ -309,7 +297,7 @@ function syncHUD(){
  reloadButton.textContent=reloading?(w.classId==="shotgun"?"LOADING SHELLS…":"RELOADING…"):"RELOAD [R]";
  reloadButton.setAttribute("aria-busy",String(reloading));
 }
-function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;shield=maxShield;kills=0;activeWeaponIndex=0;currentWeapon=activeWeapon;ammo=currentWeapon.mag;reloading=false;reloadTimer=0;fireCooldown=0;burstRemaining=0;burstTimer=0;recoilKick=0;gunKick=0;spreadKick=0;crouched=false;camera.position.set(50,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
+function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;shield=maxShield;kills=0;activeWeaponIndex=0;currentWeapon=activeWeapon;ammo=currentWeapon.mag;reloading=false;reloadTimer=0;fireCooldown=0;burstRemaining=0;burstTimer=0;recoilKick=0;gunKick=0;spreadKick=0;crouched=false;camera.position.set(60,1.7,15);camera.rotation.set(0,0,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
 function startGame(){
  if(!scene){
@@ -407,9 +395,9 @@ function shoot(){
   target.hp=Math.max(0,target.hp-damage);updateTargetBar(target);showDamagePopup(Math.round(damage));
   if(target.hp<=0){
    target.alive=false;target.root.setEnabled(false);kills++;syncHUD();showToast("DRONE ELIMINATED");
-   if(kills===5)endGame(true);
+   if(kills===6)endGame(true);
   }else{
-   $("objective").textContent="Eliminate training drones · "+kills+" / 5";
+   $("objective").textContent="Eliminate training drones · "+kills+" / 6";
   }
  }else if(pick&&pick.hit&&pick.pickedPoint){
   showImpactDot(hitPoint,hitNormal);
