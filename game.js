@@ -292,6 +292,7 @@ function removeRemotePlayer(id){
 }
 function showToast(s){const el=$("toast");el.textContent=s;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1300);}
 function showError(title,msg,stack){
+ console.log("[showError]",title,msg,stack);
  const el=$("engine-error");el.classList.add("show");el.classList.remove("hide");
  $("error-title").textContent=title||"Game Error";
  $("error-message").textContent=msg||"An unknown error occurred.";
@@ -320,6 +321,7 @@ function syncHUD(){
 function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;shield=maxShield;kills=0;activeWeaponIndex=0;currentWeapon=activeWeapon;ammo=currentWeapon.mag;reloading=false;reloadTimer=0;fireCooldown=0;burstRemaining=0;burstTimer=0;recoilKick=0;gunKick=0;spreadKick=0;crouched=false;camera.position.set(112,1.7,60);camera.rotation.set(0,Math.PI,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
 function startGame(){
+ console.log("[startGame] called, scene=",!!scene,"started=",started);
  if(!scene){
   showError("Game scene not ready","The 3D scene was not initialized. Refresh the page and try again.");
   return;
@@ -519,8 +521,9 @@ function update(dt){
  sendPlayerState();
 }
 function loop(){const now=performance.now();const dt=Math.min(.04,(now-lastTime)/1000||.016);lastTime=now;if(scene){update(dt);scene.render();} }
+console.log("[init] calling createArena()");
 try{
- createArena();resetGame();engine.runRenderLoop(loop);window.addEventListener("resize",()=>engine.resize());
+ createArena();console.log("[init] createArena() done");resetGame();console.log("[init] resetGame() done");engine.runRenderLoop(loop);console.log("[init] render loop started");window.addEventListener("resize",()=>engine.resize());
 }catch(e){
  showError("Game failed to start",""+e.message,e.stack);
 }
