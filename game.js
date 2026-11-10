@@ -70,8 +70,17 @@ function setWeapon(idx){
 function buildWeaponModel(w){
  if(weaponModelRoot)weaponModelRoot.dispose();
  weaponModelRoot=new B.TransformNode("viewmodel "+w.id,scene);weaponModelRoot.parent=gunRoot;weaponModelRoot.position.x=.34;
- const box=(name,width,height,depth,x,y,z,mat=gunMat)=>{const m=B.MeshBuilder.CreateBox(w.id+" "+name,{width,height,depth},scene);m.parent=weaponModelRoot;m.position.set(x,y,z);m.material=mat;m.isPickable=false;return m;};
- const tube=(name,diameter,length,x,y,z,mat=gunMetal,segments=12)=>{const m=B.MeshBuilder.CreateCylinder(w.id+" "+name,{height:length,diameter,tessellation:segments},scene);m.parent=weaponModelRoot;m.rotation.x=Math.PI/2;m.position.set(x,y,z);m.material=mat;m.isPickable=false;return m;};
+ const sidearmScale=w.classId==="sidearm"?0.55:1;
+ const melee=w.classId==="melee";
+ if(melee){
+  const blade=box("knife blade",.03,.55,.015,0,.15,-.35,gunMetal);blade.rotation.z=-.3;
+  const handle=box("knife handle",.035,.30,.05,0,.05,-.08,gunDark);handle.rotation.z=.1;
+  const pommel=box("knife pommel",.035,.08,.05,0,-.10,-.08,gunDark);
+  gun=null;barrelMesh=null;muzzleFlash=null;
+  return;
+ }
+ const box=(name,width,height,depth,x,y,z,mat=gunMat)=>{const m=B.MeshBuilder.CreateBox(w.id+" "+name,{width*sidearmScale,height*sidearmScale,depth*sidearmScale},scene);m.parent=weaponModelRoot;m.position.set(x*sidearmScale,y*sidearmScale,z*sidearmScale);m.material=mat;m.isPickable=false;return m;};
+ const tube=(name,diameter,length,x,y,z,mat=gunMetal,segments=12)=>{const m=B.MeshBuilder.CreateCylinder(w.id+" "+name,{height:length*sidearmScale,diameter*sidearmScale,tessellation:segments},scene);m.parent=weaponModelRoot;m.rotation.x=Math.PI/2;m.position.set(x*sidearmScale,y*sidearmScale,z*sidearmScale);m.material=mat;m.isPickable=false;return m;};
  const wood=["remington870","svd","pkm","rpk"].includes(w.model);
  const furniture=wood?gunWood:w.model==="aw"?gunOlive:gunGrip;
  const long=["sniper","lmg","shotgun","sidearm"].includes(w.classId), compact=w.classId==="smg";
@@ -364,7 +373,38 @@ function shoot(){
  if(reloading){
   if(w.classId==="shotgun"&&ammo>0){reloading=false;reloadTimer=0;syncHUD();}else return;
  }
- if(w.classId !== "melee"){if(ammo<=0){showToast("EMPTY MAGAZINE — PRESS R");mouseHeld=false;return;}ammo--;}
+ if(w.classId==="melee"){
+  // Knife melee swing
+  fireCooldown=60/w.rate;
+  gunKick=Math.min(.22,gunKick+.15);
+  recoilKick=Math.min(.16,recoilKick+.15);
+  gunRoot.position.y=(aimHeld ? .20 : 0)-gunKick*.4;
+  syncHUD();
+  const ray=camera.getForwardRay(w.range);
+  const pick=scene.pickWithRay(ray,m=>m.isPickable&&m.parent!==camera&&m.name!=="skybox"&&!m.name.startsWith("health bar"));
+  const hitPoint=pick&&pick.hit&&pick.pickedPoint?pick.pickedPoint:ray.origin.add(ray.direction.scale(w.range));
+  let target=null,hitLocation="body";
+  if(pick&&pick.hit&&pick.pickedMesh){
+   const mesh=pick.pickedMesh;
+   target=targets.find(t=>t.alive&&(mesh===t.body||mesh===t.head||mesh===t.legs||mesh.parent===t.root));
+   if(target){
+    if(mesh===target.head)hitLocation="head";
+    else if(mesh===target.legs)hitLocation="legs";
+    else hitLocation="body";
+   }
+  }
+  if(target){
+   const dx=camera.position.x-target.root.position.x;const dy=camera.position.y-target.root.position.y;const dz=camera.position.z-target.root.position.z;const distance=Math.sqrt(dx*dx+dy*dy+dz*dz);
+   const damage=calcDamage(w,hitLocation,distance);
+   target.hp=Math.max(0,target.hp-damage);updateTargetBar(target);
+   if(target.hp===0){target.alive=false;target.root.setEnabled(false);kills++;syncHUD();showToast("DRONE ELIMINATED");}
+  }
+  return;
+ }
+ if(w.classId !== "melee"){
+  if(ammo<=0){reload();mouseHeld=false;return;}
+  ammo--;
+}
  const isBurstShot=burstRemaining>0&&w.adsRate;
  fireCooldown=isBurstShot?(60/w.adsRate):w.rate;
  const ray=camera.getForwardRay(w.range);
@@ -441,7 +481,7 @@ function update(dt){
    syncHUD();
   }
  }
- const previousRecoil=recoilKick;recoilKick=Math.max(0,recoilKick-dt*.055);camera.rotation.x=Math.min(1.25,camera.rotation.x+(previousRecoil-recoilKick));gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
+ const previousRecoil=recoilKick;recoilKick=Math.max(0,recoilKick-dt*.15);camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x+(previousRecoil-recoilKick)*3));gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
  if(gunRoot&&camera){
   const opticZoom=getCurrentWeapon().zoom;
   const isScoped=opticZoom>=6;
