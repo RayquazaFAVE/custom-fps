@@ -508,7 +508,7 @@ function update(dt){
    syncHUD();
   }
  }
- const previousRecoil=recoilKick;recoilKick=Math.max(0,recoilKick-dt*.15);camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x+(previousRecoil-recoilKick)*3));gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
+ const previousRecoil=recoilKick;recoilKick=Math.max(0,recoilKick-dt*.15);camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x+(recoilKick-previousRecoil)*3));gunKick=Math.max(0,gunKick-dt*.7);spreadKick=Math.max(0,spreadKick-dt*.12);
  if(gunRoot&&camera){
   const opticZoom=getCurrentWeapon().zoom;
   const isScoped=opticZoom>=6;
