@@ -446,6 +446,7 @@ function shoot(){
  const flash=muzzleFlash;setTimeout(()=>{if(flash&&!flash.isDisposed())flash.isVisible=false;},55);
  gunRoot.position.y=(aimHeld ? .20 : 0)-gunKick*.4;
  syncHUD();
+ camera.rotation.x=Math.max(-1.25,Math.min(0.8,camera.rotation.x+w.recoil*0.25));
  const tracerColor = w.suppressed ? "#11191e" : w.color;
  const muzzle= camera.getDirection(B.Axis.Z);
  const origin=camera.position.add(muzzle.scale(.55));
@@ -508,7 +509,7 @@ function update(dt){
    syncHUD();
   }
  }
- const previousRecoil=recoilKick;recoilKick=Math.max(0,recoilKick-dt*.5);camera.rotation.x=Math.max(-1.25,Math.min(0.8,camera.rotation.x+(recoilKick-previousRecoil)*3));gunKick=Math.max(0,gunKick-dt*1.5);spreadKick=Math.max(0,spreadKick-dt*.4);
+ camera.rotation.x*=Math.max(0,1-dt*4);recoilKick=Math.max(0,recoilKick-dt*.5);gunKick=Math.max(0,gunKick-dt*1.5);spreadKick=Math.max(0,spreadKick-dt*.4);
  if(gunRoot&&camera){
   const opticZoom=getCurrentWeapon().zoom;
   const isScoped=opticZoom>=6;
