@@ -445,7 +445,6 @@ function shoot(){
  muzzleFlash.isVisible=true;
  const flash=muzzleFlash;setTimeout(()=>{if(flash&&!flash.isDisposed())flash.isVisible=false;},55);
  gunRoot.position.y=(aimHeld ? .20 : 0)-gunKick*.4;
- camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x-w.recoil));
  syncHUD();
  const tracerColor = w.suppressed ? "#11191e" : w.color;
  const muzzle= camera.getDirection(B.Axis.Z);
