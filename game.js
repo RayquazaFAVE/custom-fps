@@ -29,7 +29,7 @@ if(window.ResizeObserver){
   if(canvas){canvas.width=canvas.clientWidth||800;canvas.height=canvas.clientHeight||600;if(engine)engine.resize();}
  }).observe(canvas.parentElement||document.body);
 }
-let scene,camera,gunRoot=null,baseFov=Math.PI/2.8,started=false,paused=false,mouseHeld=false,eHeld=false,aimHeld=false,aimZoom=1,health=100,shield=50,maxShield=50,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,recoilKick=0,gunKick=0,spreadKick=0,recoilOffset=0,crouched=false,burstRemaining=0,burstTimer=0,activeWeaponIndex=0,credits=999999,netSocket=null,myName="Operator",netLastSend=0,mpCount=1,remotes=new Map();
+let scene,camera,gunRoot=null,baseFov=Math.PI/2.8,started=false,paused=false,mouseHeld=false,eHeld=false,aimHeld=false,aimZoom=1,health=100,shield=50,maxShield=50,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,recoilKick=0,gunKick=0,spreadKick=0,recoilY=0,recoilX=0,crouched=false,burstRemaining=0,burstTimer=0,activeWeaponIndex=0,credits=999999,netSocket=null,myName="Operator",netLastSend=0,mpCount=1,remotes=new Map();
 const MOVE_SPEED=6.75, WALK_SPEED=8, ARENA=100;
 const catalog=window.CustomFPSWeapons;
 
@@ -172,10 +172,10 @@ block("east wall",118,4,60,4,8,120,wall);
 
 // Spawn indents into outer walls - color coded ground circles
 // Attacker spawn (red) on east wall - color the ground beneath instead of floating geometry
-block("attacker spawn indent",112,4,60,6,8,12,spawnCover);
+block("attacker spawn indent",112,10,60,6,8,12,spawnCover);
 flat("attacker spawn ground",112,60,10,10,0.05,material("attacker spawn ground","#ff4444",.6));
 // Defender spawn (blue) on west wall
-block("defender spawn indent",8,4,60,6,8,12,spawnCover);
+block("defender spawn indent",8,10,60,6,8,12,spawnCover);
 flat("defender spawn ground",8,60,10,10,0.05,material("defender spawn ground","#33a1ff",.6));
 
 // Sites moved off to sides - small blue rectangular prisms
@@ -338,7 +338,7 @@ function syncHUD(){
  reloadButton.textContent=reloading?(w.classId==="shotgun"?"LOADING SHELLS…":"RELOADING…"):"RELOAD [R]";
  reloadButton.setAttribute("aria-busy",String(reloading));
 }
-function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;shield=maxShield;kills=0;activeWeaponIndex=0;currentWeapon=activeWeapon;ammo=currentWeapon.mag;reloading=false;reloadTimer=0;fireCooldown=0;burstRemaining=0;burstTimer=0;recoilKick=0;gunKick=0;spreadKick=0;recoilOffset=0;crouched=false;camera.position.set(112,1.7,60);camera.rotation.set(0,Math.PI,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
+function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot)gunRoot.position.set(0,0,0);if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;shield=maxShield;kills=0;activeWeaponIndex=0;currentWeapon=activeWeapon;ammo=currentWeapon.mag;reloading=false;reloadTimer=0;fireCooldown=0;burstRemaining=0;burstTimer=0;recoilKick=0;gunKick=0;spreadKick=0;recoilY=0;recoilX=0;crouched=false;camera.position.set(112,1.7,60);camera.rotation.set(0,Math.PI,0);jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
 function startGame(){
  try{
@@ -446,7 +446,7 @@ function shoot(){
  const flash=muzzleFlash;setTimeout(()=>{if(flash&&!flash.isDisposed())flash.isVisible=false;},55);
  gunRoot.position.y=(aimHeld ? .20 : 0)-gunKick*.4;
  syncHUD();
- recoilOffset=Math.min(0.8,recoilOffset+w.recoil*0.4);
+ if(recoilY<0.14){recoilY=Math.min(0.14,recoilY+w.recoil*0.05);}else{recoilX+=(Math.random()-0.5)*0.09;recoilX=Math.max(-0.05,Math.min(0.05,recoilX));}
  const tracerColor = w.suppressed ? "#11191e" : w.color;
  const muzzle= camera.getDirection(B.Axis.Z);
  const origin=camera.position.add(muzzle.scale(.55));
@@ -509,7 +509,7 @@ function update(dt){
    syncHUD();
   }
  }
- const prevRO=recoilOffset;recoilOffset=Math.max(0,recoilOffset-dt*2);camera.rotation.x=camera.rotation.x-prevRO+recoilOffset;camera.rotation.x=Math.max(-1.25,Math.min(0.8,camera.rotation.x));gunKick=Math.max(0,gunKick-dt*1.5);spreadKick=Math.max(0,spreadKick-dt*.4);
+ const prevRY=recoilY,prevRX=recoilX;recoilY=Math.max(0,recoilY-dt*0.5);recoilX=Math.max(-0.05,Math.min(0.05,recoilX-dt*0.5*Math.sign(recoilX)||0));camera.rotation.x=Math.max(-1.25,Math.min(0.8,camera.rotation.x-prevRY+recoilY));camera.rotation.y=camera.rotation.y-prevRX+recoilX;camera.rotation.y=Math.max(-1.25,Math.min(1.25,camera.rotation.y));gunKick=Math.max(0,gunKick-dt*1.5);spreadKick=Math.max(0,spreadKick-dt*.4);
  if(gunRoot&&camera){
   const opticZoom=getCurrentWeapon().zoom;
   const isScoped=opticZoom>=6;
