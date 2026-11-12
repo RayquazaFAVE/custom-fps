@@ -446,7 +446,7 @@ function shoot(){
  const flash=muzzleFlash;setTimeout(()=>{if(flash&&!flash.isDisposed())flash.isVisible=false;},55);
  gunRoot.position.y=(aimHeld ? .20 : 0)-gunKick*.4;
  syncHUD();
- if(recoilY<0.14){recoilY=Math.min(0.14,recoilY+w.recoil*0.05);}else{recoilX+=(Math.random()-0.5)*0.09;recoilX=Math.max(-0.05,Math.min(0.05,recoilX));}
+ if(recoilY<0.14){recoilY=Math.min(0.14,recoilY+w.recoil*2.0);}else{recoilX+=(Math.random()-0.5)*0.15;recoilX=Math.max(-0.1,Math.min(0.1,recoilX));}
  const tracerColor = w.suppressed ? "#11191e" : w.color;
  const muzzle= camera.getDirection(B.Axis.Z);
  const origin=camera.position.add(muzzle.scale(.55));
@@ -509,7 +509,7 @@ function update(dt){
    syncHUD();
   }
  }
- const prevRY=recoilY,prevRX=recoilX;recoilY=Math.max(0,recoilY-dt*0.5);recoilX=Math.max(-0.05,Math.min(0.05,recoilX-dt*0.5*Math.sign(recoilX)||0));camera.rotation.x=Math.max(-1.25,Math.min(0.8,camera.rotation.x-prevRY+recoilY));camera.rotation.y=camera.rotation.y-prevRX+recoilX;camera.rotation.y=Math.max(-1.25,Math.min(1.25,camera.rotation.y));gunKick=Math.max(0,gunKick-dt*1.5);spreadKick=Math.max(0,spreadKick-dt*.4);
+ const prevRY=recoilY,prevRX=recoilX;recoilY=Math.max(0,recoilY-dt*0.5);recoilX=Math.max(-0.05,Math.min(0.05,recoilX-dt*0.5*Math.sign(recoilX)||0));camera.rotation.x=Math.max(-1.25,Math.min(0.8,camera.rotation.x-prevRY+recoilY));camera.rotation.y=camera.rotation.y-prevRX+recoilX;gunKick=Math.max(0,gunKick-dt*1.5);spreadKick=Math.max(0,spreadKick-dt*.4);
  if(gunRoot&&camera){
   const opticZoom=getCurrentWeapon().zoom;
   const isScoped=opticZoom>=6;
