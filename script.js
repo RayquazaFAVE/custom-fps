@@ -6,6 +6,7 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const views = {
   lobby: $("#view-lobby"),
   loadout: $("#view-loadout"),
+  shop: $("#view-shop"),
   progression: $("#view-progression"),
   settings: $("#view-settings")
 };
