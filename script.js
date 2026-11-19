@@ -56,22 +56,164 @@ $$("[data-view]").forEach(button => button.addEventListener("click", () => showV
 $$("[data-go-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.goView)));
 $$("[data-coming-soon]").forEach(button => button.addEventListener("click", () => showToast(button.dataset.comingSoon)));
 
+const MATCHES_KEY = "customfps_matches_v1";
+const mpChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("customfps_mp_v1") : null;
+let activeRoomCode = null;
+let isHostingRoom = false;
+
+function loadMatches() {
+  try { return JSON.parse(localStorage.getItem(MATCHES_KEY) || "{}") || {}; } catch { return {}; }
+}
+function saveMatches(matches) {
+  localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+}
+function generateJoinCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+function getPlayerName() {
+  const acc = getCurrentAccount();
+  return acc ? acc.username : "Operator";
+}
+function broadcastRoomUpdate(code) {
+  if (mpChannel) mpChannel.postMessage({ type: "room-update", code });
+}
+
+function renderHostLobbyModal(code) {
+  const matches = loadMatches();
+  const room = matches[code];
+  if (!room) { closeModal(); return; }
+  if (room.started) {
+    openModal("Match Started", '<p style="font-size:16px;font-weight:700;color:#70ed63;">Match start works as intended</p><div class="modal-actions"><button class="btn btn-primary" type="button" data-close>OK</button></div>');
+    activeRoomCode = null;
+    isHostingRoom = false;
+    return;
+  }
+  const playersHtml = room.players.map(p =>
+    '<li style="padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:4px;margin-bottom:4px;">' +
+    p + (p === room.host ? ' <span style="color:#ff9f43;font-size:11px;">(HOST)</span>' : '') + '</li>'
+  ).join("");
+  openModal("Hosting Match",
+    '<p>Share this join code with other players:</p>' +
+    '<div style="font-size:26px;font-weight:800;letter-spacing:0.2em;text-align:center;padding:12px;background:rgba(255,255,255,0.06);border-radius:6px;margin:10px 0;">' + code + '</div>' +
+    '<div class="eyebrow" style="margin-top:12px;">Players in Lobby (' + room.players.length + ')</div>' +
+    '<ul style="list-style:none;padding:0;margin:8px 0 14px;">' + playersHtml + '</ul>' +
+    '<div class="modal-actions">' +
+    '<button class="btn btn-secondary" type="button" id="close-host-lobby">Close Lobby</button>' +
+    '<button class="btn btn-primary" type="button" id="start-hosted-match">Start Match</button>' +
+    '</div>'
+  );
+  $("#close-host-lobby")?.addEventListener("click", () => {
+    const m = loadMatches();
+    delete m[code];
+    saveMatches(m);
+    broadcastRoomUpdate(code);
+    activeRoomCode = null;
+    isHostingRoom = false;
+    closeModal();
+    showToast("Lobby closed.");
+  });
+  $("#start-hosted-match")?.addEventListener("click", () => {
+    const m = loadMatches();
+    if (m[code]) {
+      m[code].started = true;
+      saveMatches(m);
+      broadcastRoomUpdate(code);
+    }
+    renderHostLobbyModal(code);
+  });
+}
+
+function renderJoinedLobbyModal(code) {
+  const matches = loadMatches();
+  const room = matches[code];
+  if (!room) {
+    activeRoomCode = null;
+    closeModal();
+    showToast("Host closed the lobby.");
+    return;
+  }
+  if (room.started) {
+    openModal("Match Started", '<p style="font-size:16px;font-weight:700;color:#70ed63;">Match start works as intended</p><div class="modal-actions"><button class="btn btn-primary" type="button" data-close>OK</button></div>');
+    activeRoomCode = null;
+    return;
+  }
+  const playersHtml = room.players.map(p =>
+    '<li style="padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:4px;margin-bottom:4px;">' +
+    p + (p === room.host ? ' <span style="color:#ff9f43;font-size:11px;">(HOST)</span>' : '') + '</li>'
+  ).join("");
+  openModal("Joined Match — " + code,
+    '<p>Waiting for host <strong>' + room.host + '</strong> to start the match...</p>' +
+    '<div class="eyebrow" style="margin-top:12px;">Players in Lobby (' + room.players.length + ')</div>' +
+    '<ul style="list-style:none;padding:0;margin:8px 0 14px;">' + playersHtml + '</ul>' +
+    '<div class="modal-actions"><button class="btn btn-secondary" type="button" id="leave-joined-lobby">Leave Lobby</button></div>'
+  );
+  $("#leave-joined-lobby")?.addEventListener("click", () => {
+    const m = loadMatches();
+    if (m[code]) {
+      const me = getPlayerName();
+      m[code].players = m[code].players.filter(p => p !== me);
+      saveMatches(m);
+      broadcastRoomUpdate(code);
+    }
+    activeRoomCode = null;
+    closeModal();
+  });
+}
+
+if (mpChannel) {
+  mpChannel.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "room-update" && e.data.code === activeRoomCode) {
+      if (isHostingRoom) renderHostLobbyModal(activeRoomCode);
+      else renderJoinedLobbyModal(activeRoomCode);
+    }
+  });
+}
+window.addEventListener("storage", (e) => {
+  if (e.key === MATCHES_KEY && activeRoomCode) {
+    if (isHostingRoom) renderHostLobbyModal(activeRoomCode);
+    else renderJoinedLobbyModal(activeRoomCode);
+  }
+});
+
 const hostButton = $("#host-button");
 if (hostButton) hostButton.addEventListener("click", () => {
-  openModal("Host a LAN match", '<p>This will eventually start a match server on this computer so other players on the same network can join.</p><p><strong>Not connected yet:</strong> LAN hosting is not implemented in this prototype.</p><label class="field-label" for="host-name">Player name</label><input class="field" id="host-name" maxlength="20" placeholder="Enter a name" autocomplete="nickname"><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close>Cancel</button><button class="btn btn-primary" type="button" id="host-confirm">Got it</button></div>');
-  $("#host-confirm").addEventListener("click", () => {
-    const name = $("#host-name").value.trim();
-    closeModal();
-    showToast(name ? "Player name noted: " + name + ". LAN hosting is not connected yet." : "LAN hosting is not connected yet.");
-  });
+  const code = generateJoinCode();
+  const hostName = getPlayerName();
+  const matches = loadMatches();
+  matches[code] = { code, host: hostName, players: [hostName], started: false, createdAt: Date.now() };
+  saveMatches(matches);
+  activeRoomCode = code;
+  isHostingRoom = true;
+  broadcastRoomUpdate(code);
+  renderHostLobbyModal(code);
 });
+
 const joinButton = $("#join-button");
 if (joinButton) joinButton.addEventListener("click", () => {
-  openModal("Join a LAN match", "<p>Enter the host computer's local network address. Both computers must be on the same local network.</p><p><strong>Not connected yet:</strong> LAN joining is not implemented in this prototype.</p><label class=\"field-label\" for=\"host-address\">Host address</label><input class=\"field\" id=\"host-address\" placeholder=\"Example: 192.168.1.20\" inputmode=\"decimal\" autocomplete=\"off\"><div class=\"modal-actions\"><button class=\"btn btn-secondary\" type=\"button\" data-close>Cancel</button><button class=\"btn btn-primary\" type=\"button\" id=\"join-confirm\">Continue</button></div>");
+  openModal("Join a Match",
+    '<p>Enter the 6-character join code from the host.</p>' +
+    '<label class="field-label" for="join-code-input">Join Code</label>' +
+    '<input class="field" id="join-code-input" maxlength="6" placeholder="Example: A7K9P2" autocomplete="off" style="text-transform:uppercase;">' +
+    '<p id="join-error" style="color:#ff6b6b;font-size:12px;min-height:18px;margin-top:8px;"></p>' +
+    '<div class="modal-actions"><button class="btn btn-secondary" type="button" data-close>Cancel</button><button class="btn btn-primary" type="button" id="join-confirm">Join Match</button></div>'
+  );
   $("#join-confirm").addEventListener("click", () => {
-    const address = $("#host-address").value.trim();
-    closeModal();
-    showToast(address ? "Address noted: " + address + ". LAN joining is not connected yet." : "Enter a host address when LAN joining is implemented.");
+    const code = ($("#join-code-input").value || "").trim().toUpperCase();
+    const errEl = $("#join-error");
+    const matches = loadMatches();
+    const room = matches[code];
+    if (!room) { errEl.textContent = "No match found with that join code."; return; }
+    if (room.started) { errEl.textContent = "That match has already started."; return; }
+    const me = getPlayerName();
+    if (!room.players.includes(me)) room.players.push(me);
+    saveMatches(matches);
+    activeRoomCode = code;
+    isHostingRoom = false;
+    broadcastRoomUpdate(code);
+    renderJoinedLobbyModal(code);
   });
 });
 const deployButton = $("#deploy-button");
