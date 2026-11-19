@@ -311,7 +311,7 @@ gunDark=material("weapon dark components","#11191e");gunMetal=material("weapon m
 gunWood=material("weapon wood furniture","#795033");gunOlive=material("weapon olive furniture","#566344");gunFlash=material("weapon muzzle flash",currentWeapon.color,.5,currentWeapon.color);
 gunRoot=new B.TransformNode("weapon viewmodel root",scene);gunRoot.parent=camera;
 buildWeaponModel(currentWeapon);
-createTargets();
+if(!tdmRoomCode){createTargets();}
 const shadowGen=new B.ShadowGenerator(1024,sun);
 shadowGen.useBlurExponentialShadowMap=true;shadowGen.blurKernel=8;shadowGen.darkness=.4;
 scene.meshes.forEach(m=>{
@@ -454,7 +454,8 @@ function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false
 const spawnX=myTeam==="blue"?8:112;
 const spawnYaw=myTeam==="blue"?0:Math.PI;
 lookYaw=spawnYaw;
-camera.position.set(spawnX,1.7,60);syncCameraRotation();jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
+camera.position.set(spawnX,1.7,60);syncCameraRotation();
+if(tdmRoomCode){showToast("TDM MATCH ("+tdmRoomCode+") — "+myTeam.toUpperCase()+" TEAM");}jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
 function startGame(){
  try{
