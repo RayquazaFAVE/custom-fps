@@ -29,7 +29,18 @@ if(window.ResizeObserver){
   if(canvas){canvas.width=canvas.clientWidth||800;canvas.height=canvas.clientHeight||600;if(engine)engine.resize();}
  }).observe(canvas.parentElement||document.body);
 }
-let scene,camera,gunRoot=null,baseFov=Math.PI/2.8,started=false,paused=false,mouseHeld=false,eHeld=false,aimHeld=false,aimZoom=1,health=100,shield=50,maxShield=50,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,recoilKick=0,gunKick=0,spreadKick=0,firingSpreadDeg=0,lookPitch=0,lookYaw=Math.PI,recoilPitchDeg=0,recoilYawDeg=0,recoilHoldTimer=0,recoilPeakPitch=8,recoilPeakYaw=2.5,crouched=false,burstRemaining=0,burstTimer=0,activeWeaponIndex=0,credits=999999,netSocket=null,myName="Operator",netLastSend=0,mpCount=1,remotes=new Map();
+let scene,camera,gunRoot=null,baseFov=Math.PI/2.8,started=false,paused=false,mouseHeld=false,eHeld=false,aimHeld=false,aimZoom=1,health=100,shield=50,maxShield=50,ammo=30,kills=0,reloading=false,reloadTimer=0,lastTime=0,jumpVelocity=0,onGround=true,fireCooldown=0,targets=[],keys={},toastTimer=0,gun=null,barrelMesh=null,muzzleFlash=null,recoilKick=0,gunKick=0,spreadKick=0,firingSpreadDeg=0,lookPitch=0,lookYaw=Math.PI,recoilPitchDeg=0,recoilYawDeg=0,recoilHoldTimer=0,recoilPeakPitch=8,recoilPeakYaw=2.5,crouched=false,burstRemaining=0,burstTimer=0,activeWeaponIndex=0,credits=999999,netSocket=null,myName="Operator",myTeam="red",tdmRoomCode=null,netLastSend=0,mpCount=1,remotes=new Map();
+try{
+ const sess=JSON.parse(localStorage.getItem("customfps_session_v1")||"null");
+ if(sess&&sess.username)myName=sess.username;
+ const params=new URLSearchParams(window.location.search);
+ tdmRoomCode=params.get("room");
+ if(tdmRoomCode){
+  const matches=JSON.parse(localStorage.getItem("customfps_matches_v1")||"{}")||{};
+  const room=matches[tdmRoomCode];
+  if(room&&room.teams&&room.teams[myName])myTeam=room.teams[myName];
+ }
+}catch{}
 const MOVE_SPEED=6.75, WALK_SPEED=4.5, ARENA=100, DEG2RAD=Math.PI/180, MAX_RECOIL_PITCH_DEG=8, MAX_RECOIL_YAW_DEG=2.5, RECOIL_RETURN_TIME=0.3;
 function getRecoilProfile(){
  return {pitchCap:8.0,kickMult:1.6,yawCap:2.5,minYawStep:0.6};
@@ -439,7 +450,11 @@ function syncHUD(){
  reloadButton.textContent=reloading?(w.classId==="shotgun"?"LOADING SHELLS…":"RELOADING…"):"RELOAD [R]";
  reloadButton.setAttribute("aria-busy",String(reloading));
 }
-function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot){gunRoot.position.set(0,0,0);gunRoot.rotation.set(0,0,0);}if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;shield=maxShield;kills=0;activeWeaponIndex=0;currentWeapon=activeWeapon;ammo=currentWeapon.mag;reloading=false;reloadTimer=0;fireCooldown=0;burstRemaining=0;burstTimer=0;recoilKick=0;gunKick=0;spreadKick=0;firingSpreadDeg=0;lookPitch=0;lookYaw=Math.PI;recoilPitchDeg=0;recoilYawDeg=0;recoilHoldTimer=0;crouched=false;camera.position.set(112,1.7,60);syncCameraRotation();jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
+function resetGame(){remotes.forEach((v,k)=>removeRemotePlayer(k));aimHeld=false;aimZoom=1;if(gunRoot){gunRoot.position.set(0,0,0);gunRoot.rotation.set(0,0,0);}if(camera)camera.fov=baseFov;$("scope-overlay").classList.add("hide");$("reticle").classList.remove("hide");health=100;shield=maxShield;kills=0;activeWeaponIndex=0;currentWeapon=activeWeapon;ammo=currentWeapon.mag;reloading=false;reloadTimer=0;fireCooldown=0;burstRemaining=0;burstTimer=0;recoilKick=0;gunKick=0;spreadKick=0;firingSpreadDeg=0;lookPitch=0;lookYaw=Math.PI;recoilPitchDeg=0;recoilYawDeg=0;recoilHoldTimer=0;crouched=false;
+const spawnX=myTeam==="blue"?8:112;
+const spawnYaw=myTeam==="blue"?0:Math.PI;
+lookYaw=spawnYaw;
+camera.position.set(spawnX,1.7,60);syncCameraRotation();jumpVelocity=0;onGround=true;targets.forEach(t=>{t.alive=true;t.hp=t.maxHp;t.root.setEnabled(true);updateTargetBar(t);});syncHUD();}
 function updateTargetBar(t){const ratio=Math.max(0,t.hp/t.maxHp);t.barFill.scaling.x=ratio;t.barFill.position.x=-(1-ratio)*.625;t.barFill.material.diffuseColor=ratio>.6?B.Color3.FromHexString("#70ed63"):ratio>.3?B.Color3.FromHexString("#ffd45a"):B.Color3.FromHexString("#ff6262");t.barFill.material.emissiveColor=t.barFill.material.diffuseColor.scale(.25);}
 function startGame(){
  try{

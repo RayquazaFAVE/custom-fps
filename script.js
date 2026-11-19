@@ -86,9 +86,9 @@ function renderHostLobbyModal(code) {
   const room = matches[code];
   if (!room) { closeModal(); return; }
   if (room.started) {
-    openModal("Match Started", '<p style="font-size:16px;font-weight:700;color:#70ed63;">Match start works as intended</p><div class="modal-actions"><button class="btn btn-primary" type="button" data-close>OK</button></div>');
     activeRoomCode = null;
     isHostingRoom = false;
+    window.location.href = "game.html?v=mp-tdm-1&room=" + encodeURIComponent(code);
     return;
   }
   const playersHtml = room.players.map(p =>
@@ -136,8 +136,8 @@ function renderJoinedLobbyModal(code) {
     return;
   }
   if (room.started) {
-    openModal("Match Started", '<p style="font-size:16px;font-weight:700;color:#70ed63;">Match start works as intended</p><div class="modal-actions"><button class="btn btn-primary" type="button" data-close>OK</button></div>');
     activeRoomCode = null;
+    window.location.href = "game.html?v=mp-tdm-1&room=" + encodeURIComponent(code);
     return;
   }
   const playersHtml = room.players.map(p =>
