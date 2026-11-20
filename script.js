@@ -6,6 +6,7 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const views = {
   lobby: $("#view-lobby"),
   loadout: $("#view-loadout"),
+  shop: $("#view-shop"),
   progression: $("#view-progression"),
   settings: $("#view-settings")
 };
@@ -55,22 +56,164 @@ $$("[data-view]").forEach(button => button.addEventListener("click", () => showV
 $$("[data-go-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.goView)));
 $$("[data-coming-soon]").forEach(button => button.addEventListener("click", () => showToast(button.dataset.comingSoon)));
 
+const MATCHES_KEY = "customfps_matches_v1";
+const mpChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("customfps_mp_v1") : null;
+let activeRoomCode = null;
+let isHostingRoom = false;
+
+function loadMatches() {
+  try { return JSON.parse(localStorage.getItem(MATCHES_KEY) || "{}") || {}; } catch { return {}; }
+}
+function saveMatches(matches) {
+  localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+}
+function generateJoinCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+function getPlayerName() {
+  const acc = getCurrentAccount();
+  return acc ? acc.username : "Operator";
+}
+function broadcastRoomUpdate(code) {
+  if (mpChannel) mpChannel.postMessage({ type: "room-update", code });
+}
+
+function renderHostLobbyModal(code) {
+  const matches = loadMatches();
+  const room = matches[code];
+  if (!room) { closeModal(); return; }
+  if (room.started) {
+    activeRoomCode = null;
+    isHostingRoom = false;
+    window.location.href = "game.html?v=mp-tdm-1&room=" + encodeURIComponent(code);
+    return;
+  }
+  const playersHtml = room.players.map(p =>
+    '<li style="padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:4px;margin-bottom:4px;">' +
+    p + (p === room.host ? ' <span style="color:#ff9f43;font-size:11px;">(HOST)</span>' : '') + '</li>'
+  ).join("");
+  openModal("Hosting Match",
+    '<p>Share this join code with other players:</p>' +
+    '<div style="font-size:26px;font-weight:800;letter-spacing:0.2em;text-align:center;padding:12px;background:rgba(255,255,255,0.06);border-radius:6px;margin:10px 0;">' + code + '</div>' +
+    '<div class="eyebrow" style="margin-top:12px;">Players in Lobby (' + room.players.length + ')</div>' +
+    '<ul style="list-style:none;padding:0;margin:8px 0 14px;">' + playersHtml + '</ul>' +
+    '<div class="modal-actions">' +
+    '<button class="btn btn-secondary" type="button" id="close-host-lobby">Close Lobby</button>' +
+    '<button class="btn btn-primary" type="button" id="start-hosted-match">Start Match</button>' +
+    '</div>'
+  );
+  $("#close-host-lobby")?.addEventListener("click", () => {
+    const m = loadMatches();
+    delete m[code];
+    saveMatches(m);
+    broadcastRoomUpdate(code);
+    activeRoomCode = null;
+    isHostingRoom = false;
+    closeModal();
+    showToast("Lobby closed.");
+  });
+  $("#start-hosted-match")?.addEventListener("click", () => {
+    const m = loadMatches();
+    if (m[code]) {
+      m[code].started = true;
+      saveMatches(m);
+      broadcastRoomUpdate(code);
+    }
+    renderHostLobbyModal(code);
+  });
+}
+
+function renderJoinedLobbyModal(code) {
+  const matches = loadMatches();
+  const room = matches[code];
+  if (!room) {
+    activeRoomCode = null;
+    closeModal();
+    showToast("Host closed the lobby.");
+    return;
+  }
+  if (room.started) {
+    activeRoomCode = null;
+    window.location.href = "game.html?v=mp-tdm-1&room=" + encodeURIComponent(code);
+    return;
+  }
+  const playersHtml = room.players.map(p =>
+    '<li style="padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:4px;margin-bottom:4px;">' +
+    p + (p === room.host ? ' <span style="color:#ff9f43;font-size:11px;">(HOST)</span>' : '') + '</li>'
+  ).join("");
+  openModal("Joined Match — " + code,
+    '<p>Waiting for host <strong>' + room.host + '</strong> to start the match...</p>' +
+    '<div class="eyebrow" style="margin-top:12px;">Players in Lobby (' + room.players.length + ')</div>' +
+    '<ul style="list-style:none;padding:0;margin:8px 0 14px;">' + playersHtml + '</ul>' +
+    '<div class="modal-actions"><button class="btn btn-secondary" type="button" id="leave-joined-lobby">Leave Lobby</button></div>'
+  );
+  $("#leave-joined-lobby")?.addEventListener("click", () => {
+    const m = loadMatches();
+    if (m[code]) {
+      const me = getPlayerName();
+      m[code].players = m[code].players.filter(p => p !== me);
+      saveMatches(m);
+      broadcastRoomUpdate(code);
+    }
+    activeRoomCode = null;
+    closeModal();
+  });
+}
+
+if (mpChannel) {
+  mpChannel.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "room-update" && e.data.code === activeRoomCode) {
+      if (isHostingRoom) renderHostLobbyModal(activeRoomCode);
+      else renderJoinedLobbyModal(activeRoomCode);
+    }
+  });
+}
+window.addEventListener("storage", (e) => {
+  if (e.key === MATCHES_KEY && activeRoomCode) {
+    if (isHostingRoom) renderHostLobbyModal(activeRoomCode);
+    else renderJoinedLobbyModal(activeRoomCode);
+  }
+});
+
 const hostButton = $("#host-button");
 if (hostButton) hostButton.addEventListener("click", () => {
-  openModal("Host a LAN match", '<p>This will eventually start a match server on this computer so other players on the same network can join.</p><p><strong>Not connected yet:</strong> LAN hosting is not implemented in this prototype.</p><label class="field-label" for="host-name">Player name</label><input class="field" id="host-name" maxlength="20" placeholder="Enter a name" autocomplete="nickname"><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close>Cancel</button><button class="btn btn-primary" type="button" id="host-confirm">Got it</button></div>');
-  $("#host-confirm").addEventListener("click", () => {
-    const name = $("#host-name").value.trim();
-    closeModal();
-    showToast(name ? "Player name noted: " + name + ". LAN hosting is not connected yet." : "LAN hosting is not connected yet.");
-  });
+  const code = generateJoinCode();
+  const hostName = getPlayerName();
+  const matches = loadMatches();
+  matches[code] = { code, host: hostName, players: [hostName], started: false, createdAt: Date.now() };
+  saveMatches(matches);
+  activeRoomCode = code;
+  isHostingRoom = true;
+  broadcastRoomUpdate(code);
+  renderHostLobbyModal(code);
 });
+
 const joinButton = $("#join-button");
 if (joinButton) joinButton.addEventListener("click", () => {
-  openModal("Join a LAN match", '<p>Enter the host computer\'s local network address. Both computers must be on the same local network.</p><p><strong>Not connected yet:</strong> LAN joining is not implemented in this prototype.</p><label class="field-label" for="host-address">Host address</label><input class="field" id="host-address" placeholder="Example: 192.168.1.20" inputmode="decimal" autocomplete="off"><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close>Cancel</button><button class="btn btn-primary" type="button" id="join-confirm">Continue</button></div>');
+  openModal("Join a Match",
+    '<p>Enter the 6-character join code from the host.</p>' +
+    '<label class="field-label" for="join-code-input">Join Code</label>' +
+    '<input class="field" id="join-code-input" maxlength="6" placeholder="Example: A7K9P2" autocomplete="off" style="text-transform:uppercase;">' +
+    '<p id="join-error" style="color:#ff6b6b;font-size:12px;min-height:18px;margin-top:8px;"></p>' +
+    '<div class="modal-actions"><button class="btn btn-secondary" type="button" data-close>Cancel</button><button class="btn btn-primary" type="button" id="join-confirm">Join Match</button></div>'
+  );
   $("#join-confirm").addEventListener("click", () => {
-    const address = $("#host-address").value.trim();
-    closeModal();
-    showToast(address ? "Address noted: " + address + ". LAN joining is not connected yet." : "Enter a host address when LAN joining is implemented.");
+    const code = ($("#join-code-input").value || "").trim().toUpperCase();
+    const errEl = $("#join-error");
+    const matches = loadMatches();
+    const room = matches[code];
+    if (!room) { errEl.textContent = "No match found with that join code."; return; }
+    if (room.started) { errEl.textContent = "That match has already started."; return; }
+    const me = getPlayerName();
+    if (!room.players.includes(me)) room.players.push(me);
+    saveMatches(matches);
+    activeRoomCode = code;
+    isHostingRoom = false;
+    broadcastRoomUpdate(code);
+    renderJoinedLobbyModal(code);
   });
 });
 const deployButton = $("#deploy-button");
@@ -85,120 +228,334 @@ if (settingsButton) settingsButton.addEventListener("click", () => {
   showToast("UI scale applied for this page session.");
 });
 
-const weaponCores = {
-  vanguard: {name:"M4A1 CARBINE", className:"ASSAULT RIFLE", base:{damage:31,rate:750,recoil:1.15,reload:2.2,range:75}},
-  viper: {name:"MP5", className:"SUBMACHINE GUN", base:{damage:20,rate:800,recoil:1.45,reload:2.0,range:38}},
-  breacher: {name:"REMINGTON 870", className:"PUMP-ACTION SHOTGUN", base:{damage:12,rate:75,recoil:3.1,reload:0.55,range:20}},
-  scope: {name:"ARCTIC WARFARE", className:"SNIPER RIFLE", base:{damage:100,rate:40,recoil:3.4,reload:2.8,range:150}},
-  bastion: {name:"M249 SAW", className:"LIGHT MACHINE GUN", base:{damage:24,rate:750,recoil:2.35,reload:4.5,range:85}}
-};
-const parts = {
-  barrel: {
-    "m4a1-barrel":{damage:0,recoil:0,range:0},
-    "mp5-barrel":{damage:-8,recoil:-8,range:-18},
-    "870-barrel":{damage:5,recoil:10,range:-25},
-    "aw-barrel":{damage:12,recoil:8,range:20},
-    "m249-barrel":{damage:4,recoil:12,range:8}
-  },
-  stock: {
-    "m4a1-stock":{recoil:-5,reload:0},
-    "mp5-stock":{recoil:8,reload:-5},
-    "870-stock":{recoil:-5,reload:0},
-    "aw-stock":{recoil:-18,reload:8},
-    "m249-stock":{recoil:-12,reload:12}
-  },
-  magazine: {
-    "m4a1-mag":{capacity:30,damage:0,reload:0},
-    "mp5-mag":{capacity:30,damage:0,reload:-5},
-    "870-mag":{capacity:7,damage:0,reload:0},
-    "aw-mag":{capacity:5,damage:0,reload:0},
-    "m249-mag":{capacity:100,damage:-4,reload:18}
-  },
-  scope: {
-    "iron-sights":{zoom:1.5},
-    "aw-sight":{zoom:6}
-  }
-};
-const defaults = {core:"vanguard",barrel:"m4a1-barrel",stock:"m4a1-stock",magazine:"m4a1-mag",scope:"iron-sights"};
-let draft = {...defaults};
-let saved = {...defaults};
+// ---- Currency / Shop (session-only, no persistence) ----
+const catalog = window.CustomFPSWeapons;
+const { weapons: weaponCatalog, classes: weaponClasses, primaries, secondaries, getWeapon, defaultLoadout, normalizeLoadout } = catalog;
+const weaponById = Object.fromEntries(weaponCatalog.map(w => [w.id, w]));
 
-function statsFor(loadout) {
-  const result = {...weaponCores[loadout.core].base};
-  const barrel = parts.barrel[loadout.barrel] || {};
-  const stock = parts.stock[loadout.stock] || {};
-  const mag = parts.magazine[loadout.magazine] || {};
-  const apply = (key, percent) => { result[key] = Math.round(result[key] * (1 + percent / 100) * 100) / 100; };
-  apply("damage", barrel.damage || 0); apply("recoil", barrel.recoil || 0); apply("range", barrel.range || 0);
-  apply("recoil", stock.recoil || 0); apply("reload", stock.reload || 0);
-  apply("damage", mag.damage || 0); apply("reload", mag.reload || 0);
-  result.capacity = mag.capacity || 30;
-  result.zoom = parts.scope[loadout.scope]?.zoom || 1;
-  return result;
-}
-function syncBuilder() {
-  $$("[data-core]").forEach(button => {
-    const selected = button.dataset.core === draft.core;
-    button.classList.toggle("is-selected", selected);
-    button.setAttribute("aria-pressed", String(selected));
-    const check = button.querySelector(".core-check");
-    if (check) check.textContent = selected ? "SELECTED" : "SELECT";
-  });
-  ["barrel","stock","magazine","scope"].forEach(slot => {
-    const select = $("#part-" + slot);
-    if (select) { if (!parts[slot][draft[slot]]) draft[slot] = defaults[slot]; select.value = draft[slot]; }
-  });
-  const core = weaponCores[draft.core];
-  const stats = statsFor(draft);
-  if ($("#preview-weapon-name")) $("#preview-weapon-name").textContent = core.name;
-  if ($("#preview-weapon-class")) $("#preview-weapon-class").textContent = core.className;
-  if ($("#preview-mag-capacity")) $("#preview-mag-capacity").textContent = stats.capacity + (draft.core === "breacher" ? " SHELL TUBE" : " ROUND MAG");
-  if ($("#total-stat-grid")) {
-    const items = [
-      ["DAMAGE", stats.damage, draft.core === "breacher" ? "per pellet" : "per shot"],
-      ["FIRE RATE", stats.rate + " RPM", "base rate"],
-      ["RECOIL", stats.recoil, "lower is steadier"],
-      ["RELOAD TIME", stats.reload + (draft.core === "breacher" ? " sec / shell" : " sec"), "lower is faster"],
-      ["RANGE", stats.range + " units", "effective range"]
-    ];
-    $("#total-stat-grid").innerHTML = items.map(item => '<div class="total-stat"><span>'+item[0]+'</span><strong>'+item[1]+'</strong><small>'+item[2]+'</small></div>').join("");
-  }
-  const changed = JSON.stringify(draft) !== JSON.stringify(saved);
-  if ($("#saved-status")) $("#saved-status").classList.toggle("has-unsaved", changed);
-  if ($("#saved-loadout-name")) $("#saved-loadout-name").textContent = weaponCores[saved.core].name;
-  if ($("#save-help")) $("#save-help").textContent = changed ? "Your saved gun is unchanged. Save to use this new configuration in your next match." : "Your current draft matches your saved loadout.";
-  if ($("#saved-confirmation")) $("#saved-confirmation").hidden = true;
-}
-$$("[data-core]").forEach(button => button.addEventListener("click", () => {
-  if (!weaponCores[button.dataset.core]) return;
-  draft.core = button.dataset.core;
-  syncBuilder();
-}));
-["barrel","stock","magazine","scope"].forEach(slot => {
-  const select = $("#part-" + slot);
-  if (select) select.addEventListener("change", () => { draft[slot] = select.value; syncBuilder(); });
-});
-const saveButton = $("#save-loadout");
-if (saveButton) saveButton.addEventListener("click", () => {
-  saved = {...draft};
+// ---------- Browser-Saved Account System ----------
+const ACCOUNTS_KEY = "customfps_accounts_v1";
+const SESSION_KEY = "customfps_session_v1";
+
+function loadAccounts() {
   try {
-    localStorage.setItem("customfps-loadout", JSON.stringify({
-      loadout: {...saved},
-      stats: statsFor(saved),
-      core: weaponCores[saved.core]
-    }));
-  } catch (error) {
-    console.warn("Could not persist loadout in this browser.", error);
+    return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || "{}") || {};
+  } catch {
+    return {};
   }
-  syncBuilder();
-  if ($("#saved-confirmation")) {
-    $("#saved-confirmation").hidden = false;
-    $("#saved-confirmation").innerHTML = "<span>✓</span> LOADOUT SAVED — " + weaponCores[saved.core].name + " IS SET FOR YOUR NEXT MATCH.";
+}
+
+function saveAccounts(accounts) {
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+}
+
+function getCurrentAccount() {
+  try {
+    const session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    if (!session || !session.username) return null;
+    const accounts = loadAccounts();
+    return accounts[session.username.toLowerCase()] || null;
+  } catch {
+    return null;
   }
-  showView("lobby");
-  showToast("LOADOUT SAVED SUCCESSFULLY — " + weaponCores[saved.core].name + " is ready for your next match.");
+}
+
+async function hashPassword(password) {
+  if (window.crypto && crypto.subtle && window.TextEncoder) {
+    const data = new TextEncoder().encode(password);
+    const digest = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  let h = 2166136261;
+  for (let i = 0; i < password.length; i++) {
+    h ^= password.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16);
+}
+
+function updateAccountUI() {
+  const acc = getCurrentAccount();
+  const badge = $("#header-account");
+  const signInBtn = $("#sign-in-btn");
+  const signOutBtn = $("#sign-out-btn");
+  if (badge) {
+    badge.innerHTML = acc
+      ? 'OPERATOR <strong>' + acc.username.toUpperCase() + '</strong>'
+      : 'NOT SIGNED IN';
+  }
+  if (signInBtn) {
+    signInBtn.hidden = !!acc;
+  }
+  if (signOutBtn) {
+    signOutBtn.hidden = !acc;
+  }
+}
+
+function openAuthModal(defaultMode = "signin") {
+  let mode = defaultMode;
+  function render() {
+    const isSignup = mode === "signup";
+    $("#modal-root").innerHTML =
+      '<div class="modal-backdrop" role="presentation"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">' +
+      '<div class="eyebrow">Browser Account</div><h3 id="auth-modal-title">' + (isSignup ? "Create Account" : "Sign In") + '</h3>' +
+      '<p>' + (isSignup ? "Create an account saved in your browser." : "Sign in with your saved browser account.") + '</p>' +
+      '<div style="display:flex;gap:8px;margin-bottom:14px;">' +
+      '<button class="btn ' + (!isSignup ? "btn-primary" : "btn-secondary") + '" type="button" data-auth-mode="signin" style="flex:1;">Sign In</button>' +
+      '<button class="btn ' + (isSignup ? "btn-primary" : "btn-secondary") + '" type="button" data-auth-mode="signup" style="flex:1;">Create Account</button>' +
+      '</div>' +
+      '<label class="field-label" for="auth-username">Username</label>' +
+      '<input class="field" id="auth-username" type="text" maxlength="20" autocomplete="username" placeholder="Enter username">' +
+      '<label class="field-label" for="auth-password" style="margin-top:10px;">Password</label>' +
+      '<input class="field" id="auth-password" type="password" autocomplete="' + (isSignup ? "new-password" : "current-password") + '" placeholder="Enter password">' +
+      (isSignup ? '<label class="field-label" for="auth-confirm" style="margin-top:10px;">Confirm Password</label><input class="field" id="auth-confirm" type="password" autocomplete="new-password" placeholder="Confirm password">' : '') +
+      '<p id="auth-error" style="color:#ff6b6b;font-size:12px;min-height:18px;margin-top:8px;"></p>' +
+      '<div class="modal-actions">' +
+      '<button class="btn btn-primary" type="button" id="auth-submit">' + (isSignup ? "Create Account" : "Sign In") + '</button>' +
+      '</div></div></div>';
+
+    $$("[data-auth-mode]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        mode = btn.dataset.authMode;
+        render();
+      });
+    });
+
+    $("#auth-submit").addEventListener("click", async () => {
+      const username = ($("#auth-username").value || "").trim();
+      const password = $("#auth-password").value || "";
+      const errEl = $("#auth-error");
+      if (username.length < 2) { errEl.textContent = "Username must be at least 2 characters."; return; }
+      if (password.length < 4) { errEl.textContent = "Password must be at least 4 characters."; return; }
+
+      const accounts = loadAccounts();
+      const key = username.toLowerCase();
+      const passwordHash = await hashPassword(password);
+
+      if (isSignup) {
+        const confirm = $("#auth-confirm").value || "";
+        if (password !== confirm) { errEl.textContent = "Passwords do not match."; return; }
+        if (accounts[key]) { errEl.textContent = "An account with that username already exists."; return; }
+        accounts[key] = { username, passwordHash, createdAt: Date.now() };
+        saveAccounts(accounts);
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ username }));
+        closeModal();
+        updateAccountUI();
+        showToast("Account created & signed in as " + username + ".");
+      } else {
+        const existing = accounts[key];
+        if (!existing || existing.passwordHash !== passwordHash) {
+          errEl.textContent = "Invalid username or password.";
+          return;
+        }
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ username: existing.username }));
+        closeModal();
+        updateAccountUI();
+        showToast("Signed in as " + existing.username + ".");
+      }
+    });
+  }
+  render();
+}
+
+$("#sign-out-btn")?.addEventListener("click", () => {
+  localStorage.removeItem(SESSION_KEY);
+  updateAccountUI();
+  showToast("Signed out.");
+  openAuthModal("signin");
 });
 
-syncBuilder();
-showView("lobby");
+// ---- Loadout: Primary + Secondary (session-only, no persistence) ----
+let loadout = defaultLoadout(); // Vandal primary + Classic secondary
+
+function saveLoadout() {
+  // Session-only: persists loadout within the current browser tab so it
+  // carries from the lobby to the match. Clears when the tab is closed.
+  try{sessionStorage.setItem("customfps-loadout",JSON.stringify({loadout}));}catch(e){}
+}
+function saveOwned() {
+  // Session-only: nothing is persisted
+}
+function saveCredits() {
+  // Session-only: nothing is persisted
+}
+
+function renderCoreCatalog() {
+  const container = $("#weapon-cores");
+  const filterEl = $("#weapon-class-filter");
+  if (!container || !filterEl) return;
+  let classFilter = "all";
+
+  const weaponList = classFilter === "all" ? weaponCatalog : weaponCatalog.filter(w => w.classId === classFilter);
+
+  filterEl.innerHTML = [{id: "all", shortName: "ALL", name: "All weapon classes"}, ...weaponClasses].map(group =>
+    '<button type="button" class="class-filter' + (group.id === classFilter ? " is-active" : "") + '" data-class-filter="' + group.id + '" aria-pressed="' + (group.id === classFilter) + '" title="' + group.name + '">' + group.shortName + '</button>'
+  ).join("");
+
+  container.innerHTML = weaponClasses.map(group => {
+    const cores = catalog.coresInClass(group.id)
+      .filter(w => w.classId !== "melee" && (classFilter === "all" || w.classId === classFilter));
+    if (cores.length === 0) return "";
+    const isSidearm = group.id === "sidearm";
+    return '<section class="weapon-class-group" data-class-group="' + group.id + '"' + (classFilter !== "all" && classFilter !== group.id ? " hidden" : "") + ' aria-labelledby="class-title-' + group.id + '">' +
+      '<div class="weapon-class-heading"><h4 id="class-title-' + group.id + '"><span>' + group.key + '</span>' + group.name + '</h4><small>' + cores.length + ' ' + (isSidearm ? "SIDEARMS" : "CORES") + '</small></div>' +
+      '<div class="core-selection builder-core-selection" role="group" aria-label="Choose a ' + group.name.toLowerCase() + '">' + cores.map((core, index) => {
+      const isEquipped = loadout.core === core.id || loadout.secondary === core.id;
+      const slot = loadout.core === core.id ? "PRIMARY" : loadout.secondary === core.id ? "SECONDARY" : "";
+      const priceText = core.cost === 0 ? "FREE" : "OWNED";
+      return '<button class="core-card' + (isEquipped ? " is-equipped" : "") + '" type="button" data-core="' + core.id + '" aria-pressed="false">' +
+        '<span class="core-card-top"><span class="core-index">' + group.shortName + ' 0' + (index + 1) + '</span><span class="core-badges"><span class="price-tag">' + priceText + '</span>' + (isEquipped ? '<span class="core-check">EQUIPPED ' + slot + '</span>' : '<span class="core-check">SELECT</span>') + '</span></span>' +
+        '<span class="core-silhouette ' + group.silhouette + '" aria-hidden="true"></span>' +
+        '<strong>' + core.name + '</strong><span class="core-role">' + core.role + '</span>' +
+        '<span class="core-base-stats"><span><small>DMG</small><b>' + core.base.damage + '</b></span><span><small>RPM</small><b>' + core.base.rate + '</b></span><span><small>MAG</small><b>' + core.base.capacity + '</b></span></span>' +
+        '</button>';
+    }).join("") + '</div></section>';
+  }).join("");
+
+  filterEl.querySelectorAll("[data-class-filter]").forEach(button => {
+    button.addEventListener("click", () => {
+      classFilter = button.dataset.classFilter;
+      renderCoreCatalog();
+      filterEl.querySelector('[data-class-filter="' + classFilter + '"]')?.focus({preventScroll: true});
+    });
+  });
+
+  container.querySelectorAll("[data-core]").forEach(button => {
+    button.addEventListener("click", () => {
+      const coreId = button.dataset.core;
+      const core = getWeapon(coreId);
+      if (!core) return;
+      if (core.classId === "sidearm") {
+        loadout.secondary = coreId;
+      } else {
+        loadout.core = coreId;
+      }
+      saveLoadout();
+      renderCoreCatalog();
+      renderLoadoutPanel();
+      showToast(core.name + " " + (core.classId === "sidearm" ? "secondary" : "primary") + " equipped.");
+    });
+  });
+}
+
+function renderLoadoutPanel() {
+  const primary = getWeapon(loadout.core);
+  const secondary = getWeapon(loadout.secondary);
+  const pEl = $("#equipped-primary");
+  const sEl = $("#equipped-secondary");
+  if (pEl) pEl.textContent = primary ? primary.name : "NONE";
+  if (sEl) sEl.textContent = secondary ? secondary.name : "NONE";
+  const primaryStats = $("#primary-stats");
+  const secondaryStats = $("#secondary-stats");
+  if (primary && primaryStats) {
+    primaryStats.innerHTML = '<div class="stat-row"><span>DMG</span><strong>' + primary.base.damage + '</strong></div><div class="stat-row"><span>RPM</span><strong>' + primary.base.rate + '</strong></div><div class="stat-row"><span>MAG</span><strong>' + primary.base.capacity + '</strong></div><div class="stat-row"><span>RANGE</span><strong>' + primary.base.range + 'm</strong></div>';
+  }
+  if (secondary && secondaryStats) {
+    secondaryStats.innerHTML = '<div class="stat-row"><span>DMG</span><strong>' + secondary.base.damage + '</strong></div><div class="stat-row"><span>RPM</span><strong>' + secondary.base.rate + '</strong></div><div class="stat-row"><span>MAG</span><strong>' + secondary.base.capacity + '</strong></div><div class="stat-row"><span>RANGE</span><strong>' + secondary.base.range + 'm</strong></div>';
+  }
+}
+
+function renderShop() {
+  const container = $("#shop-list");
+  if (!container) return;
+  const purchasable = secondaries().filter(w => !ownedSecondaries.has(w.id));
+  container.innerHTML = purchasable.map(w => {
+    const b = w.base;
+    const canAfford = credits >= w.cost;
+    const headshot = b.headshot || b.damage;
+    const legs = b.legs || b.damage;
+    return '<div class="shop-item' + (canAfford ? "" : " locked") + '">' +
+      '<div class="shop-info">' +
+      '<strong>' + w.name + '</strong>' +
+      '<span class="shop-role">' + w.role + '</span>' +
+      '<p class="shop-desc">' + w.description + '</p>' +
+      '<div class="shop-stats">' +
+      '<div class="stat-row"><span>DMG</span><strong>' + b.damage + '</strong></div>' +
+      '<div class="stat-row"><span>HEAD</span><strong>' + headshot + '</strong></div>' +
+      '<div class="stat-row"><span>LEGS</span><strong>' + legs + '</strong></div>' +
+      '<div class="stat-row"><span>RPM</span><strong>' + b.rate + '</strong></div>' +
+      '<div class="stat-row"><span>MAG</span><strong>' + b.capacity + '</strong></div>' +
+      '<div class="stat-row"><span>RANGE</span><strong>' + b.range + 'm</strong></div>' +
+      '</div>' +
+      '<div class="shop-ability"><strong>Ability:</strong> ' + w.role + '</div>' +
+      '</div>' +
+      '<div class="shop-buy">' +
+      '<span class="price">' + w.cost + ' CR</span>' +
+      '<button class="btn' + (canAfford ? " btn-primary" : " btn-secondary disabled") + '" data-buy="' + w.id + '"' + (!canAfford ? " disabled" : "") + '>' + (canAfford ? "BUY" : "UNAFFORDABLE") + '</button>' +
+      '</div></div>';
+  }).join("");
+  container.querySelectorAll("[data-buy]").forEach(button => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.buy;
+      const w = getWeapon(id);
+      if (!w || ownedSecondaries.has(id)) return;
+      if (credits < w.cost) { showToast("Not enough credits."); return; }
+      credits -= w.cost;
+      saveCredits();
+      renderCredits();
+      const creditsEl = $("#shop-credits");
+      if (creditsEl) creditsEl.textContent = credits.toLocaleString();
+      ownedSecondaries.add(id);
+      saveOwned();
+      renderShop();
+      renderCoreCatalog();
+      showToast("PURCHASED " + w.name + " — " + w.cost + " credits.");
+    });
+  });
+}
+
+renderCoreCatalog();
+renderLoadoutPanel();
+function renderAgentsView() {
+  const api = window.CustomFPSAgents;
+  const list = $("#agent-list");
+  if (!api || !list) return;
+  const activeId = api.getSelectedAgentId();
+  const active = api.getAgent(activeId);
+  const titleEl = $("#selected-agent-title");
+  const roleEl = $("#selected-agent-role");
+  if (titleEl) titleEl.textContent = active.name;
+  if (roleEl) roleEl.textContent = active.role;
+  list.innerHTML = api.agents.map(a => {
+    const isSel = a.id === active.id;
+    return '<div class="info-box" style="border:' + (isSel ? '2px solid ' + a.color : '1px solid rgba(255,255,255,0.12)') + ';">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+      '<h3 style="margin:0;color:' + a.color + ';">' + a.name + '</h3>' +
+      '<span class="map-tag">' + a.role + '</span></div>' +
+      '<p style="font-size:13px;margin-bottom:10px;">' + a.description + '</p>' +
+      '<div style="font-size:12px;line-height:1.5;margin-bottom:12px;">' +
+      '<div><strong>PASSIVE — ' + a.passive.name + ':</strong> ' + a.passive.description + '</div>' +
+      '<div><strong>[C] ' + a.abilities.c.name + ' (' + a.abilities.c.maxCharges + '):</strong> ' + a.abilities.c.description + '</div>' +
+      '<div><strong>[Q] ' + a.abilities.q.name + ' (' + a.abilities.q.maxCharges + '):</strong> ' + a.abilities.q.description + '</div>' +
+      '<div><strong>[E] ' + a.abilities.e.name + ' (' + a.abilities.e.maxCharges + '):</strong> ' + a.abilities.e.description + '</div>' +
+      '<div><strong>[X] ULT — ' + a.ultimate.name + ' (' + a.ultimate.ultCost + ' pts):</strong> ' + a.ultimate.description + '</div>' +
+      '</div>' +
+      '<button class="btn ' + (isSel ? 'btn-secondary' : 'btn-primary') + '" type="button" data-select-agent="' + a.id + '">' +
+      (isSel ? 'SELECTED' : 'SELECT ' + a.name) + '</button>' +
+      '</div>';
+  }).join("");
+  $$("[data-select-agent]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      api.setSelectedAgentId(btn.dataset.selectAgent);
+      renderAgentsView();
+      showToast("AGENT SELECTED: " + api.getAgent(btn.dataset.selectAgent).name);
+    });
+  });
+}
+renderAgentsView();
+updateAccountUI();
+if (!getCurrentAccount()) {
+  openAuthModal("signin");
+}
+
+const saveButton = $("#save-loadout");
+if (saveButton) {
+  saveButton.textContent = "SAVE LOADOUT";
+  saveButton.addEventListener("click", () => {
+    saveLoadout();
+    showView("lobby");
+    showToast("LOADOUT SAVED — PRIMARY: " + getWeapon(loadout.core).name + " · SECONDARY: " + getWeapon(loadout.secondary).name);
+  });
+}
+
 })();
