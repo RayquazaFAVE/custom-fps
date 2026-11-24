@@ -874,8 +874,8 @@ function update(dt){
  const dz=(Math.cos(yaw)*forward-Math.sin(yaw)*right)*adjustedSpeed*dt;
  const old=camera.position.clone();camera.position.x+=dx;camera.position.z+=dz;
  if(camera.position.x<2||camera.position.x>118||camera.position.z<2||camera.position.z>118||scene.meshes.some(m=>m.checkCollisions&&m.isEnabled()&&m.getBoundingInfo&&m.name!=="player camera"&&m.name!=="wide flat plain"&&m.intersectsPoint(new B.Vector3(camera.position.x,camera.position.y-.7,camera.position.z)))){camera.position.x=old.x;camera.position.z=old.z;}
- if(keys.Space&&onGround){jumpVelocity=8.5;onGround=false;}
- if(!onGround||camera.position.y>targetY){jumpVelocity-=18*dt;camera.position.y+=jumpVelocity*dt;if(camera.position.y<=targetY){camera.position.y=targetY;jumpVelocity=0;onGround=true;}}
+if(keys.Space&&onGround){jumpVelocity=11.5;onGround=false;}
+if(!onGround||camera.position.y>targetY){jumpVelocity-=45*dt;camera.position.y+=jumpVelocity*dt;if(camera.position.y<=targetY){camera.position.y=targetY;jumpVelocity=0;onGround=true;}}
  targets.forEach(t=>{if(t.alive){t.root.position.y=t.baseY+Math.sin(performance.now()*.002+t.phase)*.12;t.root.rotation.y+=dt*.5;if(Math.random()<dt*.012){if(shield>0){shield=Math.max(0,shield-1);}else{health=Math.max(0,health-1);}syncHUD();if(health===0&&shield===0)endGame(false);}}});
  sendPlayerState();
 }
